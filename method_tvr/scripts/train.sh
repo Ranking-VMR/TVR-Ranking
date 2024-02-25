@@ -67,17 +67,20 @@ esac
 
 echo "Start training with dataset [${dset_name}] in Context Mode [${ctx_mode}]"
 echo "Extra args ${extra_args[@]}"
-python method_tvr/train.py \
---dset_name=${dset_name} \
---eval_split_name=${eval_split_name} \
---nms_thd=${nms_thd} \
---results_root=${results_root} \
---train_path=${train_path} \
---desc_bert_path=${desc_bert_path} \
---video_duration_idx_path=${video_duration_idx_path} \
---vid_feat_path=${vid_feat_path} \
---clip_length=${clip_length} \
---vid_feat_size=${vid_feat_size} \
---ctx_mode=${ctx_mode} \
-${extra_args[@]} \
-${@:4}
+
+echo  ${@:4}
+
+# python method_tvr/train.py \
+# --dset_name=${dset_name} \
+# --eval_split_name=${eval_split_name} \
+# --nms_thd=${nms_thd} \
+# --results_root=${results_root} \
+# --train_path=${train_path} \
+# --desc_bert_path=${desc_bert_path} \
+# --video_duration_idx_path=${video_duration_idx_path} \
+# --vid_feat_path=${vid_feat_path} \
+# --clip_length=${clip_length} \
+# --vid_feat_size=${vid_feat_size} \
+# --ctx_mode=${ctx_mode} \
+# ${extra_args[@]} \
+# ${@:4}

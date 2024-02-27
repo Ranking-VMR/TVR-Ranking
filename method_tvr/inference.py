@@ -438,6 +438,8 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
 def get_eval_res(model, eval_dataset, opt, tasks):
     """compute and save query and video proposal embeddings"""
     context_info = compute_context_info(model, eval_dataset, opt)
+    for k, v in context_info.items():
+        print(k, len(v))
     if "VCMR" in tasks or "VR" in tasks:
         logger.info("Inference with full-script.")
         eval_res = compute_query2ctx_info(model, eval_dataset, opt, context_info, max_before_nms=opt.max_before_nms,
@@ -451,7 +453,6 @@ def get_eval_res(model, eval_dataset, opt, tasks):
 
 
 POST_PROCESSING_MMS_FUNC = {"SVMR": post_processing_svmr_nms, "VCMR": post_processing_vcmr_nms}
-
 
 def eval_epoch(model, eval_dataset, opt, save_submission_filename, tasks=("SVMR",), max_after_nms=100):
     """max_after_nms: always set to 100, since the eval script only evaluate top-100"""

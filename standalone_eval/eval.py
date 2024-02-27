@@ -189,7 +189,7 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
     iou_c_offset = 4  # iou_corrects column index starts here
     if task_type == "VCMR":
         for iou_idx, iou_thd in enumerate(iou_thds):
-            iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(np.bool)  # (n_desc, n_pred)
+            iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(bool)  # (n_desc, n_pred)
             # 1) there might be more than one positive clip, so use `>= 1`
             for k in recall_topks:
                 metrics["{}-r{}".format(iou_thd, k)] = \
@@ -200,17 +200,17 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
                 n_desc_in_type = np.sum(type_corrects)  # (n_desc)
                 for iou_idx, iou_thd in enumerate(iou_thds):
                     # (n_desc, n_pred)
-                    iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(np.bool)
+                    iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(bool)
                     for k in recall_topks:
                         metrics_by_type["{}-{}-r{}".format(desc_type, iou_thd, k)] = get_rounded_percentage(
                             1.0 * np.sum(np.logical_and(np.sum(iou_corrects[:, :k], axis=1) >= 1, type_corrects))
                             / n_desc_in_type
                         )
     elif task_type == "SVMR":
-        vid_name_matched = pred_info_matrix_collection[:, :, 3].astype(np.bool)  # (n_desc, n_pred)
+        vid_name_matched = pred_info_matrix_collection[:, :, 3].astype(bool)  # (n_desc, n_pred)
         n_desc = len(vid_name_matched)
         for iou_idx, iou_thd in enumerate(iou_thds):
-            iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(np.bool)  # (n_desc, n_pred)
+            iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(bool)  # (n_desc, n_pred)
             # 1) there might be more than one positive clip, so use `>= 1`
             for k in recall_topks:
                 metrics["{}-r{}".format(iou_thd, k)] = get_rounded_percentage(np.mean(
@@ -222,7 +222,7 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
                 n_desc_in_type = np.sum(type_corrects)  # (n_desc)
                 for iou_idx, iou_thd in enumerate(iou_thds):
                     # (n_desc, n_pred)
-                    iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(np.bool)
+                    iou_corrects = pred_info_matrix_collection[:, :, iou_c_offset + iou_idx].astype(bool)
                     # 1) there might be more than one positive clip, so use `>= 1`
                     for k in recall_topks:
                         metrics_by_type["{}-{}-r{}".format(desc_type, iou_thd, k)] = get_rounded_percentage(
@@ -231,7 +231,7 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
                             / n_desc_in_type)
 
     elif task_type == "VR":
-        vid_name_matched = pred_info_matrix_collection[:, :, 3].astype(np.bool)  # (n_desc, n_pred)
+        vid_name_matched = pred_info_matrix_collection[:, :, 3].astype(bool)  # (n_desc, n_pred)
         for k in recall_topks:
             metrics["r{}".format(k)] = \
                 get_rounded_percentage(np.mean(np.sum(vid_name_matched[:, :k], axis=1) >= 1))

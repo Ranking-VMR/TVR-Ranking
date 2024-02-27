@@ -184,7 +184,7 @@ class StartEndEvalDataset(Dataset):
         else:
             self.desc_bert_h5 = h5py.File(desc_bert_path_or_handler, "r", driver=h5driver)
 
-        video_data = load_json(video_duration_idx_path)[self.eval_split_name]
+        video_data = load_json(video_duration_idx_path)
         self.video_data = [{"vid_name": k, "duration": v[0]} for k, v in video_data.items()]
         self.video2idx = {k: v[1] for k, v in video_data.items()}
         self.clip_length = clip_length
@@ -332,6 +332,112 @@ def prepare_batch_inputs(batched_model_inputs, device, non_blocking=False):
         else:
             model_inputs[k] = v.to(device, non_blocking=non_blocking)
     return model_inputs
+
+
+
+# class VideoCorpusDataset(Dataset):
+#     """
+#     init_data_mode: `video_query` or `video_only` or `query_only`,
+#         it indicates which data to load when initialize the Dataset object.
+#     data_mode: `context` or `query`, it indicates which data to return for self.__get_item__()
+#     desc_bert_path_or_handler: h5py.File object or str path
+#     vid_feat_path_or_handler: h5py.File object or str path
+#     eval_proposal_bsz: the proposals for a single video will be sorted in length and batched here with
+#         max batch size to be eval_proposal_bsz. A single video might have multiple batches of proposals.
+#     load_gt_video: load GroundTruth Video, useful when evaluating single video moment retrieval.
+#     data_ratio: percentage of query data to use.
+#     """
+#     def __init__(self, dset_name,  desc_bert_path_or_handler=None,
+#                  max_ctx_len=None, sub_bert_path_or_handler=None, vid_feat_path_or_handler=None,
+#                  video_duration_idx_path=None, clip_length=None, ctx_mode="video", h5driver=None,
+#                  data_ratio=1.0, normalize_vfeat=True, normalize_tfeat=True):
+#         self.dset_name = dset_name
+#         self.ctx_mode = ctx_mode
+#         self.load_gt_video = False
+#         self.data_ratio = data_ratio  # only affect query data
+#         self.normalize_vfeat = normalize_vfeat
+#         self.normalize_tfeat = normalize_tfeat
+
+
+#         self.max_ctx_len = max_ctx_len
+#         if isinstance(desc_bert_path_or_handler, h5py.File):
+#             self.desc_bert_h5 = desc_bert_path_or_handler
+#         else:
+#             self.desc_bert_h5 = h5py.File(desc_bert_path_or_handler, "r", driver=h5driver)
+
+#         video_data = load_json(video_duration_idx_path)
+#         self.video_data = [{"vid_name": k, "duration": v[0]} for k, v in video_data.items()]
+#         self.video2idx = {k: v[1] for k, v in video_data.items()}
+#         self.clip_length = clip_length
+
+#         self.use_video = "video" in self.ctx_mode
+#         self.use_sub = "sub" in self.ctx_mode
+#         self.use_tef = "tef" in self.ctx_mode
+
+#         if self.use_video:
+#             if isinstance(vid_feat_path_or_handler, h5py.File):
+#                 self.vid_feat_h5 = vid_feat_path_or_handler
+#             else:  # str path
+#                 self.vid_feat_h5 = h5py.File(vid_feat_path_or_handler, "r", driver=h5driver)
+
+#         if self.use_sub:
+#             if isinstance(sub_bert_path_or_handler, h5py.File):
+#                 self.sub_bert_h5 = sub_bert_path_or_handler
+#             else:  # str path
+#                 self.sub_bert_h5 = h5py.File(sub_bert_path_or_handler, "r", driver=h5driver)
+
+
+#     def load_gt_vid_name_for_query(self, load_gt_video):
+#         """load_gt_video: bool, affect the returned value of self._get_item_query"""
+#         if load_gt_video:
+#             assert "vid_name" in self.query_data[0]
+#         self.load_gt_video = load_gt_video
+
+#     def __len__(self):
+#         return len(self.video_data)
+
+#     def __getitem__(self, index):
+#         """No need to batch, since it has already been batched here"""
+#         raw_data = self.video_data[index]
+#         # initialize with basic data
+#         meta = dict(vid_name=raw_data["vid_name"], duration=raw_data["duration"])
+#         model_inputs = dict()
+#         ctx_l = 0
+
+#         if self.use_video:
+#             video_feat = uniform_feature_sampling(self.vid_feat_h5[meta["vid_name"]][:], self.max_ctx_len)
+#             if self.normalize_vfeat:
+#                 video_feat = l2_normalize_np_array(video_feat)
+#             model_inputs["video_feat"] = torch.from_numpy(video_feat)
+#             ctx_l = len(video_feat)
+#         else:
+#             model_inputs["video_feat"] = torch.zeros((2, 2))
+
+#         if self.use_sub:  # no need for ctx feature, as the features are already contextualized
+#             sub_feat = uniform_feature_sampling(self.sub_bert_h5[meta["vid_name"]][:], self.max_ctx_len)
+#             if self.normalize_tfeat:
+#                 sub_feat = l2_normalize_np_array(sub_feat)
+#             model_inputs["sub_feat"] = torch.from_numpy(sub_feat)
+#             ctx_l = len(sub_feat)
+#         else:
+#             model_inputs["sub_feat"] = torch.zeros((2, 2))
+
+#         if self.use_tef:
+#             ctx_l = meta["duration"] // self.clip_length + 1 if ctx_l == 0 else ctx_l
+#             tef_st = torch.arange(0, ctx_l, 1.0) / ctx_l
+#             tef_ed = tef_st + 1.0 / ctx_l
+#             tef = torch.stack([tef_st, tef_ed], dim=1)  # (N_clips, 2)
+#             tef_feat = tef
+#         else:
+#             tef_feat = torch.zeros((2, 2))
+
+#         if self.use_video and self.use_tef:  # (N_clips, D+2)
+#             model_inputs["video_feat"] = torch.cat([model_inputs["video_feat"], tef_feat], dim=1)
+#         if self.use_sub and self.use_tef:  # (N_clips, D_t+2)
+#             model_inputs["sub_feat"] = torch.cat([model_inputs["sub_feat"], tef_feat], dim=1)
+#         return dict(meta=meta, model_inputs=model_inputs)
+
+
 
 
 if __name__ == '__main__':

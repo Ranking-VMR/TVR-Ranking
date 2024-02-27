@@ -268,6 +268,23 @@ def start_training():
             data_ratio=opt.data_ratio,
             normalize_vfeat=not opt.no_norm_vfeat,
             normalize_tfeat=not opt.no_norm_tfeat)
+        
+
+        # video_corpus_dataset = VideoCorpusDataset(
+        #     dset_name=opt.dset_name,
+        #     desc_bert_path_or_handler=train_dataset.desc_bert_h5,
+        #     sub_bert_path_or_handler=train_dataset.sub_bert_h5 if "sub" in opt.ctx_mode else None,
+        #     max_ctx_len=opt.max_ctx_l,
+        #     video_duration_idx_path=opt.video_duration_idx_path,
+        #     vid_feat_path_or_handler=train_dataset.vid_feat_h5 if "video" in opt.ctx_mode else None,
+        #     clip_length=opt.clip_length,
+        #     ctx_mode=opt.ctx_mode,
+        #     h5driver=opt.h5driver,
+        #     data_ratio=opt.data_ratio,
+        #     normalize_vfeat=not opt.no_norm_vfeat,
+        #     normalize_tfeat=not opt.no_norm_tfeat)   
+        
+        
     else:
         train_eval_dataset, eval_dataset = None, None
 
@@ -313,4 +330,4 @@ if __name__ == '__main__':
         logger.info("\n\n\nFINISHED TRAINING!!!")
         logger.info("Evaluating model in {}".format(model_dir))
         logger.info("Input args {}".format(sys.argv[1:]))
-        start_inference()
+        # start_inference()

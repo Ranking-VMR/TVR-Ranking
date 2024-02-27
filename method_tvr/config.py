@@ -31,7 +31,7 @@ class BaseOptions(object):
                                       "which works by breaking the loops, typically they are not used together.")
         self.parser.add_argument("--results_root", type=str, default="results")
         self.parser.add_argument("--exp_id", type=str, default=None, help="id of this run, required at training")
-        self.parser.add_argument("--seed", type=int, default=2018, help="random seed")
+        self.parser.add_argument("--seed", type=int, default=2024, help="random seed")
         self.parser.add_argument("--device", type=int, default=0, help="0 cuda, -1 cpu")
         self.parser.add_argument("--device_ids", type=int, nargs="+", default=[0], help="GPU ids to run the job")
         self.parser.add_argument("--num_workers", type=int, default=8,

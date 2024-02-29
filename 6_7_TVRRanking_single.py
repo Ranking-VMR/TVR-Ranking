@@ -2,9 +2,9 @@ from utils.basic_utils import load_jsonl, save_jsonl, save_json
 import random
 random.seed(2024)
 
-# data = load_jsonl("data/TVR_Ranking/test_tvrr.jsonl")
+data = load_jsonl("data/TVR_Ranking_raw/test_tvrr.jsonl")
 # data = load_jsonl("data/TVR_Ranking/train_raw.jsonl")
-data = load_jsonl("data/TVR_Ranking/val_tvrr.jsonl")
+# data = load_jsonl("data/TVR_Ranking/val_tvrr.jsonl")
 single_data = []
 qid_set = set()
 
@@ -21,12 +21,14 @@ for row in data:
                 "desc": row["query"],
                 'type': 'v',
                 "desc_id":row["qid"],
+                "similarity": 0,
+                "caption": "placehold"
                 }
         single_data.append(tmp)
     
-# save_jsonl(single_data, "data/TVR_Ranking_Single/test_single.jsonl")
+save_jsonl(single_data, "data/TVR_Ranking_10/test_mul.jsonl")
 # save_jsonl(single_data, "data/TVR_Ranking_Single/train_single.jsonl")
-save_jsonl(single_data, "data/TVR_Ranking_Single/val_single.jsonl")
+# save_jsonl(single_data, "data/TVR_Ranking_Single/val_single.jsonl")
 
 
 

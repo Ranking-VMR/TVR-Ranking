@@ -87,8 +87,9 @@ class StartEndDataset(Dataset):
         raw_data = self.data[index]
         # initialize with basic data
         meta = dict(desc_id=raw_data["desc_id"], desc=raw_data["desc"], vid_name=raw_data["vid_name"],
-                    duration=raw_data["duration"], ts=raw_data["ts"])
+                    duration=raw_data["duration"], ts=raw_data["ts"], simi=raw_data["similarity"], caption=raw_data["caption"])
         model_inputs = dict()
+        model_inputs["simi"] = raw_data["similarity"]
         model_inputs["query_feat"] = self.get_query_feat_by_desc_id(meta["desc_id"])
 
         ctx_l = 0
@@ -299,7 +300,14 @@ class StartEndEvalDataset(Dataset):
 def start_end_collate(batch):
     batch_meta = [e["meta"] for e in batch]
     model_inputs_keys = batch[0]["model_inputs"].keys()
+    
+    batch_meta = [e["meta"] for e in batch]
+    
     batched_data = dict()
+    if "simi" in batch[0]["model_inputs"]:
+        simis = [e["model_inputs"]["simi"] for e in batch]
+        batched_data["simi"] =  torch.tensor(simis)
+        
     for k in model_inputs_keys:
         if "feat" in k:
             if k in ['video_feat', 'sub_feat', 'tef_feat']:

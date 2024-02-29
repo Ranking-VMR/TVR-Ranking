@@ -143,64 +143,98 @@ def train(model, train_dataset, train_eval_dataset, val_dataset, opt):
     eval_tasks_at_training = opt.eval_tasks_at_training  # VR is computed along with VCMR
     save_submission_filename = "latest_{}_{}_predictions_{}.json".format(opt.dset_name, opt.eval_split_name,
                                                                          "_".join(eval_tasks_at_training))
+    
+    
+    eval_step = len(train_loader) // opt.eval_num_per_epoch
     for epoch_i in trange(start_epoch, opt.n_epoch, desc="Epoch"):
-        if epoch_i > -1:
-            with torch.autograd.detect_anomaly():
-                train_epoch(model, train_loader, optimizer, opt, epoch_i, training=True)
         global_step = (epoch_i + 1) * len(train_loader)
-        if opt.eval_path is not None:
-            with torch.no_grad():
-                train_epoch(model, train_eval_loader, optimizer, opt, epoch_i, training=False)
-                metrics_no_nms, metrics_nms, latest_file_paths = eval_epoch(
-                    model, val_dataset, opt, save_submission_filename, tasks=eval_tasks_at_training, max_after_nms=100)
-            to_write = opt.eval_log_txt_formatter.format(time_str=time.strftime("%Y_%m_%d_%H_%M_%S"), epoch=epoch_i,
-                                                         eval_metrics_str=json.dumps(metrics_no_nms))
-            with open(opt.eval_log_filepath, "a") as f:
-                f.write(to_write)
-            logger.info("metrics_no_nms {}".format(pprint.pformat(
-                rm_key_from_odict(metrics_no_nms, rm_suffix="by_type"), indent=4)))
-            logger.info("metrics_nms {}".format(pprint.pformat(metrics_nms, indent=4)))
-            # metrics = metrics_nms if metrics_nms is not None else metrics_no_nms
-            metrics = metrics_no_nms
-            # early stop/ log / save model
-            for task_type in ["SVMR", "VCMR"]:
-                if task_type in metrics:
-                    task_metrics = metrics[task_type]
-                    for iou_thd in [0.5, 0.7]:
-                        opt.writer.add_scalars("Eval/{}-{}".format(task_type, iou_thd),
-                                               {k: v for k, v in task_metrics.items() if str(iou_thd) in k},
-                                               global_step)
-            task_type = "VR"
-            if task_type in metrics:
-                task_metrics = metrics[task_type]
-                opt.writer.add_scalars("Eval/{}".format(task_type), {k: v for k, v in task_metrics.items()},
-                                       global_step)
-            # use the most strict metric available
-            stop_metric_names = ["r1"] if opt.stop_task == "VR" else ["0.5-r1", "0.7-r1"]
-            stop_score = sum([metrics[opt.stop_task][e] for e in stop_metric_names])
-            if stop_score > prev_best_score:
-                es_cnt = 0
-                prev_best_score = stop_score
-                checkpoint = {"model": model.state_dict(), "model_cfg": model.config, "epoch": epoch_i}
-                torch.save(checkpoint, opt.ckpt_filepath)
-                best_file_paths = [e.replace("latest", "best") for e in latest_file_paths]
-                for src, tgt in zip(latest_file_paths, best_file_paths):
-                    os.renames(src, tgt)
-                logger.info("The checkpoint file has been updated.")
-            else:
-                es_cnt += 1
-                if opt.max_es_cnt != -1 and es_cnt > opt.max_es_cnt:  # early stop
-                    with open(opt.train_log_filepath, "a") as f:
-                        f.write("Early Stop at epoch {}".format(epoch_i))
-                    logger.info("Early stop at {} with {} {}".format(
-                        epoch_i, " ".join([opt.stop_task] + stop_metric_names), prev_best_score))
-                    break
-        else:
-            checkpoint = {"model": model.state_dict(), "model_cfg": model.config, "epoch": epoch_i}
-            torch.save(checkpoint, opt.ckpt_filepath)
+        
+        ########### ---------------------- ##################
+        training=True
+        with torch.autograd.detect_anomaly():
+            # train_epoch(model, train_loader, optimizer, opt, epoch_i, training=True)
+            ### train epoch 
+            logger.info("use train_epoch func for training: {}".format(training))
+            model.train(mode=training)
+            if opt.hard_negative_start_epoch != -1 and epoch_i >= opt.hard_negative_start_epoch:
+                model.set_hard_negative(True, opt.hard_pool_size)
+            if opt.train_span_start_epoch != -1 and epoch_i >= opt.train_span_start_epoch:
+                model.set_train_st_ed(opt.lw_st_ed)
 
-        if opt.debug:
-            break
+            # init meters
+            loss_meters = OrderedDict(loss_st_ed=AverageMeter(), loss_fcl=AverageMeter(), loss_vcl=AverageMeter(),
+                                    loss_neg_ctx=AverageMeter(), loss_neg_q=AverageMeter(),
+                                    loss_overall=AverageMeter())
+
+
+            num_training_examples = len(train_loader)
+            for batch_idx, batch in tqdm(enumerate(train_loader), desc="Training Iteration", total=num_training_examples):
+                global_step = epoch_i * num_training_examples + batch_idx
+
+                model_inputs = prepare_batch_inputs(batch[1], opt.device, non_blocking=opt.pin_memory)
+                loss, loss_dict = model(**model_inputs)
+                optimizer.zero_grad()
+                loss.backward()
+                if opt.grad_clip != -1:
+                    nn.utils.clip_grad_norm_(model.parameters(), opt.grad_clip)
+                optimizer.step()
+                opt.writer.add_scalar("Train/LR", float(optimizer.param_groups[0]["lr"]), global_step)
+                for k, v in loss_dict.items():
+                    opt.writer.add_scalar("Train/{}".format(k), v, global_step)
+                for k, v in loss_dict.items():
+                    loss_meters[k].update(float(v))
+
+                    
+                ###### ------------------- #############
+                ### eval during training
+                if global_step % eval_step == 0 and global_step != 0:
+                    with torch.no_grad():
+                        # train_epoch(model, train_eval_loader, optimizer, opt, epoch_i, training=False)
+                        metrics_no_nms, metrics_nms, latest_file_paths = eval_epoch(
+                            model, val_dataset, opt, save_submission_filename, tasks=eval_tasks_at_training, max_after_nms=100)
+                    to_write = opt.eval_log_txt_formatter.format(time_str=time.strftime("%Y_%m_%d_%H_%M_%S"), epoch=epoch_i,
+                                                                eval_metrics_str=json.dumps(metrics_no_nms))
+                    with open(opt.eval_log_filepath, "a") as f:
+                        f.write(to_write)
+                    logger.info("metrics_no_nms {}".format(pprint.pformat(
+                        rm_key_from_odict(metrics_no_nms, rm_suffix="by_type"), indent=4)))
+                    logger.info("metrics_nms {}".format(pprint.pformat(metrics_nms, indent=4)))
+                    # metrics = metrics_nms if metrics_nms is not None else metrics_no_nms
+                    metrics = metrics_no_nms
+                    # early stop/ log / save model
+                    for task_type in ["SVMR", "VCMR"]:
+                        if task_type in metrics:
+                            task_metrics = metrics[task_type]
+                            for iou_thd in [0.5, 0.7]:
+                                opt.writer.add_scalars("Eval/{}-{}".format(task_type, iou_thd),
+                                                    {k: v for k, v in task_metrics.items() if str(iou_thd) in k},
+                                                    global_step)
+                    task_type = "VR"
+                    if task_type in metrics:
+                        task_metrics = metrics[task_type]
+                        opt.writer.add_scalars("Eval/{}".format(task_type), {k: v for k, v in task_metrics.items()},
+                                            global_step)
+                    # use the most strict metric available
+                    stop_metric_names = ["r1"] if opt.stop_task == "VR" else ["0.5-r1", "0.7-r1"]
+                    stop_score = sum([metrics[opt.stop_task][e] for e in stop_metric_names])
+                    if stop_score > prev_best_score:
+                        es_cnt = 0
+                        prev_best_score = stop_score
+                        checkpoint = {"model": model.state_dict(), "model_cfg": model.config, "epoch": epoch_i}
+                        torch.save(checkpoint, opt.ckpt_filepath)
+                        best_file_paths = [e.replace("latest", "best") for e in latest_file_paths]
+                        for src, tgt in zip(latest_file_paths, best_file_paths):
+                            os.renames(src, tgt)
+                        logger.info("The checkpoint file has been updated.")
+                    # else:
+                        # es_cnt += 1
+                        # if opt.max_es_cnt != -1 and es_cnt > opt.max_es_cnt:  # early stop
+                        #     with open(opt.train_log_filepath, "a") as f:
+                        #         f.write("Early Stop at epoch {}".format(epoch_i))
+                        #     logger.info("Early stop at {} with {} {}".format(
+                        #         epoch_i, " ".join([opt.stop_task] + stop_metric_names), prev_best_score))
+                        #     break
+
 
     opt.writer.close()
 
@@ -268,22 +302,6 @@ def start_training():
             data_ratio=opt.data_ratio,
             normalize_vfeat=not opt.no_norm_vfeat,
             normalize_tfeat=not opt.no_norm_tfeat)
-        
-
-        # video_corpus_dataset = VideoCorpusDataset(
-        #     dset_name=opt.dset_name,
-        #     desc_bert_path_or_handler=train_dataset.desc_bert_h5,
-        #     sub_bert_path_or_handler=train_dataset.sub_bert_h5 if "sub" in opt.ctx_mode else None,
-        #     max_ctx_len=opt.max_ctx_l,
-        #     video_duration_idx_path=opt.video_duration_idx_path,
-        #     vid_feat_path_or_handler=train_dataset.vid_feat_h5 if "video" in opt.ctx_mode else None,
-        #     clip_length=opt.clip_length,
-        #     ctx_mode=opt.ctx_mode,
-        #     h5driver=opt.h5driver,
-        #     data_ratio=opt.data_ratio,
-        #     normalize_vfeat=not opt.no_norm_vfeat,
-        #     normalize_tfeat=not opt.no_norm_tfeat)   
-        
         
     else:
         train_eval_dataset, eval_dataset = None, None

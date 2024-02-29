@@ -124,6 +124,7 @@ class BaseOptions(object):
                                  help="additionally use non-maximum suppression (or non-minimum suppression for "
                                       "distance) to post-processing the predictions. -1: do not use nms. 0.6 for "
                                       "charades_sta, 0.5 for anet_cap")
+        self.parser.add_argument("--eval_num_per_epoch", type=int, default=10, help="eval times during each epoch")
 
     def display_save(self, opt):
         args = vars(opt)

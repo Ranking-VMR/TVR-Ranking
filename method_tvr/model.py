@@ -55,8 +55,10 @@ class ReLoCLNet(nn.Module):
         self.merged_st_predictor = nn.Conv1d(**conv_cfg)
         self.merged_ed_predictor = nn.Conv1d(**conv_cfg)
 
-        self.temporal_criterion = nn.CrossEntropyLoss(reduction="mean")
-        self.nce_criterion = MILNCELoss(reduction='mean')
+        # self.temporal_criterion = nn.CrossEntropyLoss(reduction="mean")
+        self.temporal_criterion = nn.CrossEntropyLoss(reduction="none")
+        self.nce_criterion = MILNCELoss(reduction=False)
+        # self.nce_criterion = MILNCELoss(reduction='mean')
 
         self.reset_parameters()
 
@@ -86,7 +88,7 @@ class ReLoCLNet(nn.Module):
         """pre-train video retrieval then span prediction"""
         self.config.lw_st_ed = lw_st_ed
 
-    def forward(self, query_feat, query_mask, video_feat, video_mask, sub_feat, sub_mask, st_ed_indices, match_labels):
+    def forward(self, query_feat, query_mask, video_feat, video_mask, sub_feat, sub_mask, st_ed_indices, match_labels, simi):
         """
         Args:
             query_feat: (N, Lq, Dq)
@@ -134,8 +136,10 @@ class ReLoCLNet(nn.Module):
             loss_neg_ctx = self.config.lw_neg_ctx * loss_neg_ctx
             loss_neg_q = self.config.lw_neg_q * loss_neg_q
         # sum loss
-        loss = loss_fcl + loss_vcl + loss_st_ed + loss_neg_ctx + loss_neg_q
-        return loss, {"loss_st_ed": float(loss_st_ed), "loss_fcl": float(loss_fcl), "loss_vcl": loss_vcl,
+        # loss = loss_fcl + loss_vcl + loss_st_ed + loss_neg_ctx + loss_neg_q
+        simi = torch.exp(10*(simi-0.7)) 
+        loss = ((loss_fcl + loss_vcl + loss_st_ed) * simi).mean() +  loss_neg_ctx + loss_neg_q
+        return loss, {"loss_st_ed": float(loss_st_ed.mean()), "loss_fcl": float(loss_fcl.mean()), "loss_vcl": loss_vcl.mean(),
                       "loss_neg_ctx": float(loss_neg_ctx), "loss_neg_q": float(loss_neg_q), "loss_overall": float(loss)}
 
     def encode_query(self, query_feat, query_mask):

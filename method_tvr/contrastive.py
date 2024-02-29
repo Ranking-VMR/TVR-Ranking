@@ -115,7 +115,8 @@ def batch_video_query_loss(video, query, match_labels, mask, measure='JSD'):
     E_neg = torch.sum(E_neg * neg_mask, dim=1) / (torch.sum(neg_mask, dim=1) + 1e-12)  # (bsz, )
 
     E = E_neg - E_pos  # (bsz, )
-    return torch.mean(E)
+    # return torch.mean(E)
+    return E
 
 
 def batch_video_video_loss(video, st_ed_indices, match_labels, mask, measure='JSD'):

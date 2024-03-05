@@ -1,11 +1,13 @@
  CUDA_VISIBLE_DEVICES=0 \
    python method_tvr/train.py \
-      --dset_name tvr \
+      --model_name ReLoCLNet \
+      --dset_name TVR-Ranking \
       --eval_split_name val \
       --nms_thd -1 \
       --results_root results/mul_train \
       --train_path data/TVR_Ranking_1/train.jsonl \
-      --eval_path data/TVR_Ranking_1/test.jsonl \
+      --val_path data/TVR_Ranking_1/val.jsonl \
+      --test_path data/TVR_Ranking_1/test.jsonl \
       --clip_length 1.5 \
       --vid_feat_size 1024 \
       --ctx_mode video_sub_tef \
@@ -17,6 +19,6 @@
       --desc_bert_path /storage/rjliang/TVRR/ReLoCLNet/data/common_data/query_bert.h5 \
       --sub_bert_path /storage_fast/rjliang/tvr/feat/bert_feature/sub_query/tvr_sub_pretrained_w_sub_query_max_cl-1.5.h5\
       --eval_tasks_at_training VCMR \
-      --eval_num_per_epoch 1 \
+      --eval_num_per_epoch 10 \
       --n_epoch 300 \
       --exp_id top_1

@@ -1,11 +1,12 @@
  CUDA_VISIBLE_DEVICES=1,2 \
    python method_tvr/train.py \
-      --dset_name tvr \
+      --dset_name TVR-Ranking \
       --eval_split_name val \
       --nms_thd -1 \
       --results_root results/mul_train \
       --train_path data/TVR_Ranking_10/train_mul.jsonl \
-      --eval_path data/TVR_Ranking_10/test_mul.jsonl \
+      --val_path data/TVR_Ranking_10/val_mul.jsonl \
+      --test_path data/TVR_Ranking_10/test_mul.jsonl \
       --clip_length 1.5 \
       --vid_feat_size 1024 \
       --ctx_mode video_sub_tef \

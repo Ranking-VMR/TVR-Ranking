@@ -20,7 +20,7 @@ class BaseOptions(object):
 
     def initialize(self):
         self.initialized = True
-        self.parser.add_argument("--dset_name", type=str, choices=["tvr"])
+        self.parser.add_argument("--dset_name", type=str)
         self.parser.add_argument("--eval_split_name", type=str, default="val",
                                  help="should match keys in video_duration_idx_path, must set for VCMR")
         self.parser.add_argument("--debug", action="store_true",
@@ -81,9 +81,9 @@ class BaseOptions(object):
         self.parser.add_argument("--max_ctx_l", type=int, default=128,
                                  help="max number of snippets, 100 for tvr clip_length=1.5, oly 109/21825 > 100")
         self.parser.add_argument("--train_path", type=str, default=None)
-        self.parser.add_argument("--eval_path", type=str, default=None,
-                                 help="Evaluating during training, for Dev set. If None, will only do training, "
-                                      "anet_cap and charades_sta has no dev set, so None")
+        self.parser.add_argument("--val_path", type=str, default=None)
+        self.parser.add_argument("--test_path", type=str, default=None)
+        
         self.parser.add_argument("--desc_bert_path", type=str, default=None)
         self.parser.add_argument("--sub_bert_path", type=str, default=None)
         self.parser.add_argument("--sub_feat_size", type=int, default=768, help="feature dim for sub feature")
@@ -125,6 +125,7 @@ class BaseOptions(object):
                                       "distance) to post-processing the predictions. -1: do not use nms. 0.6 for "
                                       "charades_sta, 0.5 for anet_cap")
         self.parser.add_argument("--eval_num_per_epoch", type=int, default=10, help="eval times during each epoch")
+        self.parser.add_argument("--model_name", type=str)
 
     def display_save(self, opt):
         args = vars(opt)
@@ -170,8 +171,6 @@ class BaseOptions(object):
                          exclude_dirs=["results", "debug_results", "__pycache__"],
                          exclude_extensions=[".pyc", ".ipynb", ".swap"],)
         self.display_save(opt)
-        if "sub" in opt.ctx_mode:
-            assert opt.dset_name == "tvr", "sub is only supported for tvr dataset"
         if opt.hard_negative_start_epoch != -1:
             if opt.hard_pool_size > opt.bsz:
                 print("[WARNING] hard_pool_size is larger than bsz")

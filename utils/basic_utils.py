@@ -230,3 +230,29 @@ def get_show_name(vid_name):
     vid_name_prefix = vid_name.split("_")[0]
     show_name = vid_name_prefix if vid_name_prefix in show_list else "bbt"
     return show_name
+
+
+import time
+import logging
+import os
+
+def get_logger(dir, tile):
+    os.makedirs(dir, exist_ok=True)
+    log_file = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    log_file = os.path.join(dir, "{}_{}.log".format(log_file, tile))
+
+    logger = logging.getLogger()
+    logger.setLevel('DEBUG')
+    BASIC_FORMAT = "%(levelname)s:%(message)s"
+    # DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+    formatter = logging.Formatter(BASIC_FORMAT)
+    chlr = logging.StreamHandler()
+    chlr.setFormatter(formatter)
+
+    fhlr = logging.FileHandler(log_file) 
+    fhlr.setFormatter(formatter)
+    fhlr.setLevel('INFO') 
+
+    logger.addHandler(chlr)
+    logger.addHandler(fhlr)
+    return logger

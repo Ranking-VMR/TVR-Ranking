@@ -106,14 +106,14 @@ def get_submission_top_n(submission, top_n=100):
     return top_n_submission
 
 
-def compute_context_info(model, eval_dataset, opt):
+def compute_context_info(model, context_data, opt):
     """Use val set to do evaluation, remember to run with torch.no_grad().
     estimated 2200 (videos) * 100 (frm) * 500 (hsz) * 4 (B) * 2 (video/sub) * 2 (layers) / (1024 ** 2) = 1.76 GB
     max_n_videos: only consider max_n_videos videos for each query to return st_ed scores.
     """
     model.eval()
-    eval_dataset.set_data_mode("context")
-    context_dataloader = DataLoader(eval_dataset, collate_fn=start_end_collate, batch_size=opt.eval_context_bsz,
+    # eval_dataset.set_data_mode("context")
+    context_dataloader = DataLoader(context_data, collate_fn=start_end_collate, batch_size=opt.eval_context_bsz,
                                     num_workers=opt.num_workers, shuffle=False, pin_memory=opt.pin_memory)
     metas = []  # list(dicts)
     video_feat, video_mask = [], []
@@ -435,9 +435,9 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
     return {k: v for k, v in res.items() if len(v) != 0}
 
 
-def get_eval_res(model, eval_dataset, opt, tasks):
+def get_eval_res(model,  eval_dataset, context_data, opt, tasks):
     """compute and save query and video proposal embeddings"""
-    context_info = compute_context_info(model, eval_dataset, opt)
+    context_info = compute_context_info(model, context_data, opt)
     for k, v in context_info.items():
         print(k, len(v))
     if "VCMR" in tasks or "VR" in tasks:
@@ -454,14 +454,11 @@ def get_eval_res(model, eval_dataset, opt, tasks):
 
 POST_PROCESSING_MMS_FUNC = {"SVMR": post_processing_svmr_nms, "VCMR": post_processing_vcmr_nms}
 
-def eval_epoch(model, eval_dataset, opt, save_submission_filename, tasks=("SVMR",), max_after_nms=100):
+def eval_epoch(model, eval_dataset, context_data, logger, opt, save_submission_filename, tasks=("SVMR",), max_after_nms=100):
     """max_after_nms: always set to 100, since the eval script only evaluate top-100"""
     model.eval()
     logger.info("Computing scores")
-    st_time = time.time()
-    eval_submission_raw = get_eval_res(model, eval_dataset, opt, tasks)
-    total_time = time.time() - st_time
-    print("\n" + "\x1b[1;31m" + str(total_time) + "\x1b[0m", flush=True)
+    eval_submission_raw = get_eval_res(model, eval_dataset, context_data, opt, tasks)
 
     IOU_THDS = (0.5, 0.7)  # (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
     logger.info("Saving/Evaluating before nms results")
@@ -475,9 +472,6 @@ def eval_epoch(model, eval_dataset, opt, save_submission_filename, tasks=("SVMR"
         save_metrics_path = submission_path.replace(".json", "_metrics.json")
         save_json(metrics, save_metrics_path, save_pretty=True, sort_keys=False)
         latest_file_paths = [submission_path, save_metrics_path]
-    else:
-        metrics = None
-        latest_file_paths = [submission_path, ]
 
     if opt.nms_thd != -1:
         logger.info("Performing nms with nms_thd {}".format(opt.nms_thd))
@@ -490,6 +484,7 @@ def eval_epoch(model, eval_dataset, opt, save_submission_filename, tasks=("SVMR"
         submission_nms_path = submission_path.replace(".json", "_nms_thd_{}.json".format(opt.nms_thd))
         save_json(eval_submission_after_nms, submission_nms_path)
         if opt.eval_split_name == "val":
+            
             metrics_nms = eval_retrieval(eval_submission_after_nms, eval_dataset.query_data, iou_thds=IOU_THDS,
                                          match_number=not opt.debug, verbose=opt.debug)
             save_metrics_nms_path = submission_nms_path.replace(".json", "_metrics.json")

@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 class StartEndDataset(Dataset):
     """
     Args:
-        dset_name, str, ["tvr"]
         ctx_mode: str,
     Return:
         a dict: {
@@ -33,10 +32,9 @@ class StartEndDataset(Dataset):
             }
         }
     """
-    def __init__(self, dset_name, data_path, desc_bert_path_or_handler, sub_bert_path_or_handler, max_desc_len,
+    def __init__(self, data_path, desc_bert_path_or_handler, sub_bert_path_or_handler, max_desc_len,
                  max_ctx_len, vid_feat_path_or_handler, clip_length, ctx_mode="video", normalize_vfeat=True,
                  normalize_tfeat=True, h5driver=None, data_ratio=1.0):
-        self.dset_name = dset_name
         self.data_path = data_path
         self.data_ratio = data_ratio
 
@@ -162,12 +160,10 @@ class StartEndEvalDataset(Dataset):
     load_gt_video: load GroundTruth Video, useful when evaluating single video moment retrieval.
     data_ratio: percentage of query data to use.
     """
-    def __init__(self, dset_name, eval_split_name, data_path=None, desc_bert_path_or_handler=None, max_desc_len=None,
+    def __init__(self, data_path=None, desc_bert_path_or_handler=None, max_desc_len=None,
                  max_ctx_len=None, sub_bert_path_or_handler=None, vid_feat_path_or_handler=None,
                  video_duration_idx_path=None, clip_length=None, ctx_mode="video", data_mode="context", h5driver=None,
                  data_ratio=1.0, normalize_vfeat=True, normalize_tfeat=True):
-        self.dset_name = dset_name
-        self.eval_split_name = eval_split_name
         self.ctx_mode = ctx_mode
         self.load_gt_video = False
         self.data_ratio = data_ratio  # only affect query data

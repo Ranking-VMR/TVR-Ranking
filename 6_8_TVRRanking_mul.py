@@ -37,7 +37,7 @@ def collect_dataset(raw_data_path, out_data_path, data_type):
     save_jsonl(new_data, out_data_path)
 
 
-top = 5
+top = 40
 raw_data_path = "data/TVR_Ranking_raw/train_raw.jsonl"
 out_data_path =  f"data/TVR_Ranking_{top}/train.jsonl"
 collect_dataset(raw_data_path, out_data_path, "train")

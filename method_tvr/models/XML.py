@@ -8,69 +8,29 @@ from method_tvr.models.XML_lib  import BertAttention, PositionEncoding, LinearLa
 from utils.model_utils import RNNEncoder
 
 
-base_bert_layer_config = dict(
-    hidden_size=768,
-    intermediate_size=768,
-    hidden_dropout_prob=0.1,
-    attention_probs_dropout_prob=0.1,
-    num_attention_heads=4,
-)
-
-xml_base_config = edict(
-    merge_two_stream=True,  # merge only the scores
-    cross_att=True,  # cross-attention for video and subtitles
-    span_predictor_type="conv",
-    encoder_type="transformer",  # cnn, transformer, lstm, gru
-    add_pe_rnn=False,  # add positional encoding for RNNs, (LSTM and GRU)
-    visual_input_size=2048,  # changes based on visual input type
-    query_input_size=768,
-    sub_input_size=768,
-    hidden_size=500,  #
-    conv_kernel_size=5,  # conv kernel_size for st_ed predictor
-    stack_conv_predictor_conv_kernel_sizes=-1,  # Do not use
-    conv_stride=1,  #
-    max_ctx_l=100,
-    max_desc_l=30,
-    input_drop=0.1,  # dropout for input
-    drop=0.1,  # dropout for other layers
-    n_heads=4,  # self attention heads
-    ctx_mode="video_sub",  # which context are used. 'video', 'sub' or 'video_sub'
-    margin=0.1,  # margin for ranking loss
-    ranking_loss_type="hinge",  # loss type, 'hinge' or 'lse'
-    lw_neg_q=1,  # loss weight for neg. query and pos. context
-    lw_neg_ctx=1,  # loss weight for pos. query and neg. context
-    lw_st_ed=1,  # loss weight for st ed prediction
-    use_hard_negative=False,  # use hard negative at video level, we may change it during training.
-    hard_pool_size=20,
-    use_self_attention=True,
-    no_modular=False,
-    pe_type="none",  # no positional encoding
-    initializer_range=0.02,
-)
-
 from easydict import EasyDict as EDict
 def set_XML_Config(opt):
     model_config = EDict(
-        merge_two_stream=not opt.no_merge_two_stream,  # merge video and subtitles
-        cross_att=not opt.no_cross_att,  # use cross-attention when encoding video and subtitles
-        span_predictor_type=opt.span_predictor_type,  # span_predictor_type
-        encoder_type=opt.encoder_type,  # gru, lstm, transformer
-        add_pe_rnn=opt.add_pe_rnn,  # add pe for RNNs
-        pe_type=opt.pe_type,  #
+        merge_two_stream=False,  # merge video and subtitles
+        cross_att=False,  # use cross-attention when encoding video and subtitles
+        span_predictor_type='conv',  # span_predictor_type
+        encoder_type='transformer',  # gru, lstm, transformer
+        add_pe_rnn=False,  # add pe for RNNs
+        pe_type=False,  #
         visual_input_size=opt.vid_feat_size,
         sub_input_size=opt.sub_feat_size,  # for both desc and subtitles
         query_input_size=opt.q_feat_size,  # for both desc and subtitles
         hidden_size=opt.hidden_size,  #
-        stack_conv_predictor_conv_kernel_sizes=opt.stack_conv_predictor_conv_kernel_sizes,  #
+        stack_conv_predictor_conv_kernel_sizes=-1,  #
         conv_kernel_size=opt.conv_kernel_size,
         conv_stride=opt.conv_stride,
-        max_ctx_l=opt.max_ctx_l,
-        max_desc_l=opt.max_desc_l,
-        input_drop=opt.input_drop,
-        cross_att_drop=opt.cross_att_drop,
+        max_ctx_l=128,
+        max_desc_l=30,
+        input_drop=0.1,
+        cross_att_drop=0.1,
         drop=opt.drop,
-        n_heads=opt.n_heads,  # self-att heads
-        initializer_range=opt.initializer_range,  # for linear layer
+        n_heads=4,  # self-att heads
+        initializer_range=0.02,  # for linear layer
         ctx_mode=opt.ctx_mode,  # video, sub or video_sub
         margin=opt.margin,  # margin for ranking loss
         ranking_loss_type=opt.ranking_loss_type,  # loss type, 'hinge' or 'lse'
@@ -79,8 +39,8 @@ def set_XML_Config(opt):
         lw_st_ed=0,  # will be assigned dynamically at training time
         use_hard_negative=False,  # reset at each epoch
         hard_pool_size=opt.hard_pool_size,
-        use_self_attention=not opt.no_self_att,  # whether to use self attention
-        no_modular=opt.no_modular
+        use_self_attention=True,  # whether to use self attention
+        no_modular=False
     )
     return model_config
 
@@ -192,7 +152,7 @@ class XML(nn.Module):
                                                 out_features=self.use_sub + self.use_video,
                                                 bias=False)
 
-        self.temporal_criterion = nn.CrossEntropyLoss(reduction="mean")
+        self.temporal_criterion = nn.CrossEntropyLoss(reduction="none")
 
         if config.merge_two_stream and config.span_predictor_type == "conv":
             if self.config.stack_conv_predictor_conv_kernel_sizes == -1:
@@ -244,8 +204,8 @@ class XML(nn.Module):
         """pre-train video retrieval then span prediction"""
         self.config.lw_st_ed = lw_st_ed
 
-    def forward(self, query_feat, query_mask, video_feat, video_mask, sub_feat, sub_mask,
-                st_ed_indices):
+    def forward(self, query_feat, query_mask, video_feat, video_mask, sub_feat, sub_mask, match_labels,
+                st_ed_indices, simi):
         """
         Args:
             query_feat: (N, Lq, Dq)
@@ -279,8 +239,10 @@ class XML(nn.Module):
         loss_st_ed = self.config.lw_st_ed * loss_st_ed
         loss_neg_ctx = self.config.lw_neg_ctx * loss_neg_ctx
         loss_neg_q = self.config.lw_neg_q * loss_neg_q
-        loss = loss_st_ed + loss_neg_ctx + loss_neg_q
-        return loss, {"loss_st_ed": float(loss_st_ed),
+        # loss = loss_st_ed + loss_neg_ctx + loss_neg_q
+        loss = (loss_st_ed * simi).mean() + loss_neg_ctx + loss_neg_q
+         
+        return loss, {"loss_st_ed": float(loss_st_ed.mean()),
                       "loss_neg_ctx": float(loss_neg_ctx),
                       "loss_neg_q": float(loss_neg_q),
                       "loss_overall": float(loss)}

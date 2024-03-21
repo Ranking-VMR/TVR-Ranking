@@ -36,13 +36,10 @@ gt_data_tmp["end_time"] = gt_data_tmp["timestamp"].apply(lambda x: x[1])
 gt_data_tmp["vid"] = gt_data_tmp["vname"].map(video2idx) 
 gt_data = gt_data_tmp.rename(columns={"final_match_score": "match_score"})
 gt_data = gt_data[["qid", "query", "vid", "start_time", "end_time", "match_score"]]
-
 ndcg_scores = []
-
 
 ###### ------------------ #######
 for i in tqdm(range(len(pred_data["VCMR"]))):
-
     one_query_preds = pred_data["VCMR"][i]
     qid = one_query_preds["desc_id"]
     query = one_query_preds["desc"]

@@ -22,7 +22,8 @@ from method_tvr.inference import eval_epoch, start_inference
 from method_tvr.optimization import BertAdam
 from utils.basic_utils import AverageMeter, get_logger
 from utils.model_utils import count_parameters
-
+from method_tvr.models.ReLoclNet import set_ReLoCLNet_Config
+from method_tvr.models.XML import set_XML_Config, XML
 
 
 
@@ -99,14 +100,15 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                 # print(eval_tasks_at_training)
                 if global_step % eval_step == 0:# and global_step != 0:
                     with torch.no_grad():
-                        val_metrics_no_nms, val_metrics_nms, val_latest_file_paths = eval_epoch(model, val_data, context_data, logger, opt, "val_"+save_submission_filename, tasks=eval_tasks_at_training, max_after_nms=100)
-                    
+                        NDCG_IOU_top10, NDCG_IOU_top20, NDCG_IOU_top40, val_prediction_paths = eval_epoch(model, val_data, context_data, logger, opt, "val_"+save_submission_filename, tasks=eval_tasks_at_training, max_after_nms=100)
                         test_metrics_no_nms, test_metrics_nms, test_latest_file_paths = eval_epoch(model, test_data, context_data, logger, opt, "test_"+save_submission_filename, tasks=eval_tasks_at_training, max_after_nms=100)
                     
                     
+                    
                     logger.info(f"EPOCH: {epoch_i}")
-                    logger.info(f"VAL: metrics_no_nms: {json.dumps(val_metrics_no_nms)}")
-                    logger.info(f"VAL: metrics_nms: {json.dumps(val_metrics_nms)}")
+                    logger.info(f"VAL: NDCG@10_IOU: {json.dumps(NDCG_IOU_top10)}")
+                    logger.info(f"VAL: NDCG@20_IOU: {json.dumps(NDCG_IOU_top40)}")
+                    logger.info(f"VAL: NDCG@40_IOU: {json.dumps(val_metrics_no_nms)}")
                     logger.info(f"TEST: metrics_no_nms: {json.dumps(test_metrics_no_nms)}")
                     logger.info(f"TEST: metrics_nms: {json.dumps(test_metrics_nms)}")
                     
@@ -140,8 +142,6 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                             
                         # logger.info("The checkpoint file has been updated.")
                         
-                        test_latest_file_paths
-                        
                         
                     # else:
                         # es_cnt += 1
@@ -171,37 +171,38 @@ def start_training():
     val_data = get_eval_data(opt, opt.val_path, data_mode="query")
     test_data = get_eval_data(opt, opt.test_path, data_mode="query")
     
-    # model_name = eval(opt.model_name)
-    # model_config = eval("set_"+opt.model_name+"_Config")(opt)
-    # logger.info("{} config {}".format(model_name, model_config))
-    # model = model_name(model_config)
-    
-    model_config = EDict(
-        visual_input_size=opt.vid_feat_size,
-        sub_input_size=opt.sub_feat_size,  # for both desc and subtitles
-        query_input_size=opt.q_feat_size,  # for both desc and subtitles
-        hidden_size=opt.hidden_size,  # hidden dimension
-        conv_kernel_size=opt.conv_kernel_size,
-        conv_stride=opt.conv_stride,
-        max_ctx_l=opt.max_ctx_l,
-        max_desc_l=opt.max_desc_l,
-        input_drop=opt.input_drop,
-        drop=opt.drop,
-        n_heads=opt.n_heads,  # self-att heads
-        initializer_range=opt.initializer_range,  # for linear layer
-        ctx_mode=opt.ctx_mode,  # video, sub or video_sub
-        margin=opt.margin,  # margin for ranking loss
-        ranking_loss_type=opt.ranking_loss_type,  # loss type, 'hinge' or 'lse'
-        lw_neg_q=opt.lw_neg_q,  # loss weight for neg. query and pos. context
-        lw_neg_ctx=opt.lw_neg_ctx,  # loss weight for pos. query and neg. context
-        lw_fcl=opt.lw_fcl,  # loss weight for frame level contrastive learning
-        lw_vcl=opt.lw_vcl,  # loss weight for video level contrastive learning
-        lw_st_ed=0,  # will be assigned dynamically at training time
-        use_hard_negative=False,  # reset at each epoch
-        hard_pool_size=opt.hard_pool_size)
-    logger.info("model_config {}".format(model_config))
-    model = ReLoCLNet(model_config)
+    model_name = eval(opt.model_name)
+    model_config = eval("set_"+opt.model_name+"_Config")(opt)
+    logger.info("{} config {}".format(model_name, model_config))
+    model = model_name(model_config)
     count_parameters(model)
+    
+    # model_config = EDict(
+    #     visual_input_size=opt.vid_feat_size,
+    #     sub_input_size=opt.sub_feat_size,  # for both desc and subtitles
+    #     query_input_size=opt.q_feat_size,  # for both desc and subtitles
+    #     hidden_size=opt.hidden_size,  # hidden dimension
+    #     conv_kernel_size=opt.conv_kernel_size,
+    #     conv_stride=opt.conv_stride,
+    #     max_ctx_l=opt.max_ctx_l,
+    #     max_desc_l=opt.max_desc_l,
+    #     input_drop=opt.input_drop,
+    #     drop=opt.drop,
+    #     n_heads=opt.n_heads,  # self-att heads
+    #     initializer_range=opt.initializer_range,  # for linear layer
+    #     ctx_mode=opt.ctx_mode,  # video, sub or video_sub
+    #     margin=opt.margin,  # margin for ranking loss
+    #     ranking_loss_type=opt.ranking_loss_type,  # loss type, 'hinge' or 'lse'
+    #     lw_neg_q=opt.lw_neg_q,  # loss weight for neg. query and pos. context
+    #     lw_neg_ctx=opt.lw_neg_ctx,  # loss weight for pos. query and neg. context
+    #     lw_fcl=opt.lw_fcl,  # loss weight for frame level contrastive learning
+    #     lw_vcl=opt.lw_vcl,  # loss weight for video level contrastive learning
+    #     lw_st_ed=0,  # will be assigned dynamically at training time
+    #     use_hard_negative=False,  # reset at each epoch
+    #     hard_pool_size=opt.hard_pool_size)
+    # logger.info("model_config {}".format(model_config))
+    # model = ReLoCLNet(model_config)
+    # count_parameters(model)
     
     # Prepare optimizer
     if opt.device.type == "cuda":

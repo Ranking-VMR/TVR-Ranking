@@ -1,6 +1,9 @@
 import os
 import pprint
 import logging
+import sys
+sys.path.append("..")
+sys.path.append(".")
 import time
 import numpy as np
 from tqdm import tqdm
@@ -16,6 +19,7 @@ from utils.basic_utils import save_json, load_json
 from utils.temporal_nms import temporal_non_maximum_suppression
 from utils.tensor_utils import find_max_triples_from_upper_triangle_product
 from standalone_eval.eval import eval_retrieval
+from method_tvr.init_dataset import get_train_data_loader, get_eval_data
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s.%(msecs)03d:%(levelname)s:%(name)s - %(message)s",
@@ -440,14 +444,10 @@ def get_eval_res(model,  eval_dataset, context_data, opt, tasks):
     context_info = compute_context_info(model, context_data, opt)
     for k, v in context_info.items():
         print(k, len(v))
-    if "VCMR" in tasks or "VR" in tasks:
-        logger.info("Inference with full-script.")
-        eval_res = compute_query2ctx_info(model, eval_dataset, opt, context_info, max_before_nms=opt.max_before_nms,
-                                          max_n_videos=opt.max_vcmr_video, tasks=tasks)
-    else:
-        logger.info("Inference at [SVMR only] mode. This script is different.")
-        eval_res = compute_query2ctx_info_svmr_only(model, eval_dataset, opt, context_info,
-                                                    max_before_nms=opt.max_before_nms)
+        
+    eval_res = compute_query2ctx_info(model, eval_dataset, opt, context_info, max_before_nms=opt.max_before_nms,
+                                        max_n_videos=opt.max_vcmr_video, tasks=tasks)
+
     eval_res["video2idx"] = eval_dataset.video2idx
     return eval_res
 
@@ -457,10 +457,9 @@ POST_PROCESSING_MMS_FUNC = {"SVMR": post_processing_svmr_nms, "VCMR": post_proce
 def eval_epoch(model, eval_dataset, context_data, logger, opt, save_submission_filename, tasks=("SVMR",), max_after_nms=100):
     """max_after_nms: always set to 100, since the eval script only evaluate top-100"""
     model.eval()
-    logger.info("Computing scores")
     eval_submission_raw = get_eval_res(model, eval_dataset, context_data, opt, tasks)
 
-    IOU_THDS = (0.5, 0.7)  # (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+    IOU_THDS = (0.3, 0.5, 0.7)  
     logger.info("Saving/Evaluating before nms results")
     submission_path = os.path.join(opt.results_dir, save_submission_filename)
     eval_submission = get_submission_top_n(eval_submission_raw, top_n=max_after_nms)
@@ -521,34 +520,20 @@ def start_inference():
     cudnn.benchmark = False
     cudnn.deterministic = True
 
-    assert opt.eval_path is not None
-    eval_dataset = StartEndEvalDataset(
-        dset_name=opt.dset_name,
-        eval_split_name=opt.eval_split_name,  # should only be val set
-        data_path=opt.eval_path,
-        desc_bert_path_or_handler=opt.desc_bert_path,
-        sub_bert_path_or_handler=opt.sub_bert_path,
-        max_desc_len=opt.max_desc_l,
-        max_ctx_len=opt.max_ctx_l,
-        video_duration_idx_path=opt.video_duration_idx_path,
-        vid_feat_path_or_handler=opt.vid_feat_path,
-        clip_length=opt.clip_length,
-        ctx_mode=opt.ctx_mode,
-        data_mode="query",
-        h5driver=opt.h5driver,
-        data_ratio=opt.data_ratio,
-        normalize_vfeat=not opt.no_norm_vfeat,
-        normalize_tfeat=not opt.no_norm_tfeat)
+    context_data = get_eval_data(opt, opt.val_path, data_mode="context")
+    val_data = get_eval_data(opt, opt.val_path, data_mode="query")
+    
 
     model = setup_model(opt)
     save_submission_filename = "inference_{}_{}_{}_predictions_{}.json".format(
         opt.dset_name, opt.eval_split_name, opt.eval_id, "_".join(opt.tasks))
     logger.info("Starting inference...")
     with torch.no_grad():
-        metrics_no_nms, metrics_nms, latest_file_paths = eval_epoch(model, eval_dataset, opt, save_submission_filename,
+        metrics_no_nms, metrics_nms, latest_file_paths = eval_epoch(model, val_data, context_data, logger, opt, save_submission_filename,
                                                                     tasks=opt.tasks, max_after_nms=100)
     logger.info("metrics_no_nms \n{}".format(pprint.pformat(metrics_no_nms, indent=4)))
     logger.info("metrics_nms \n{}".format(pprint.pformat(metrics_nms, indent=4)))
+    print(latest_file_paths)
 
 
 if __name__ == '__main__':

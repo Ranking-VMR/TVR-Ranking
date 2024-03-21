@@ -148,7 +148,7 @@ class BaseOptions(object):
             opt.eval_query_bsz = 100
         if isinstance(self, TestOptions):
             # modify model_dir to absolute path
-            opt.model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results", opt.model_dir)
+            # opt.model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results", opt.model_dir)
             saved_options = load_json(os.path.join(opt.model_dir, self.saved_option_filename))
             for arg in saved_options:  # use saved options to overwrite all BaseOptions args.
                 if arg not in ["results_root", "num_workers", "nms_thd", "debug",

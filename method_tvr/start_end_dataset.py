@@ -64,6 +64,8 @@ class StartEndDataset(Dataset):
             else:  # str path
                 self.vid_feat_h5 = h5py.File(vid_feat_path_or_handler, "r", driver=h5driver)
 
+        print(desc_bert_path_or_handler)
+        print("-----------------")
         if isinstance(desc_bert_path_or_handler, h5py.File):
             self.desc_bert_h5 = desc_bert_path_or_handler
         else:
@@ -84,8 +86,8 @@ class StartEndDataset(Dataset):
     def __getitem__(self, index):
         raw_data = self.data[index]
         # initialize with basic data
-        meta = dict(desc_id=raw_data["desc_id"], desc=raw_data["desc"], vid_name=raw_data["vid_name"],
-                    duration=raw_data["duration"], ts=raw_data["ts"], simi=raw_data["similarity"], caption=raw_data["caption"])
+        meta = dict(desc_id=raw_data["query_id"], desc=raw_data["query"], vid_name=raw_data["video_name"],
+                    duration=raw_data["duration"], ts=raw_data["timestamp"], simi=raw_data["similarity"], caption=raw_data["caption"])
         model_inputs = dict()
         model_inputs["simi"] = raw_data["similarity"]
         model_inputs["query_feat"] = self.get_query_feat_by_desc_id(meta["desc_id"])
@@ -240,8 +242,8 @@ class StartEndEvalDataset(Dataset):
     def _get_item_query(self, index):
         """Need to batch"""
         raw_data = self.query_data[index]
-        meta = dict(desc_id=raw_data["desc_id"], desc=raw_data["desc"],
-                    vid_name=raw_data["vid_name"] if self.load_gt_video else None)
+        meta = dict(desc_id=raw_data["query_id"], desc=raw_data["query"],
+                    vid_name=raw_data["video_name"] if self.load_gt_video else None)
         model_inputs = dict()
         model_inputs["query_feat"] = self.get_query_feat_by_desc_id(meta["desc_id"])
         return dict(meta=meta, model_inputs=model_inputs)

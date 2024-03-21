@@ -1,4 +1,4 @@
- CUDA_VISIBLE_DEVICES=0,1 \
+ CUDA_VISIBLE_DEVICES=0 \
    python method_tvr/train.py \
       --dset_name tvr \
       --eval_split_name val \
@@ -18,3 +18,5 @@
       --sub_bert_path /storage_fast/rjliang/tvr/feat/bert_feature/sub_query/tvr_sub_pretrained_w_sub_query_max_cl-1.5.h5\
       --eval_tasks_at_training VCMR \
       --exp_id demo
+
+      # qsub -I -l select=1:ngpus=1 -P gs_slab -q slab_gpu8

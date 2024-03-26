@@ -6,7 +6,7 @@ raw_data_path = "./data/tvr_all_release.jsonl"
 raw_data = load_jsonl(raw_data_path)
 
 # {"vid_name": "friends_s09e23-24_seg02_clip_33", "duration": 61.03,
-# "ts": [0, 2.75], "desc": "Phoebe picks up a drink from the bar.", "type": "v", "desc_id": 28592}
+# "ts": [0, 2.75], "desc": "Phoebe picks up a drink from the bar.", "type": "v", "query_id": 28592}
 
 video_set = set()
 for i in raw_data:

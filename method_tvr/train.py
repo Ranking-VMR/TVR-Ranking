@@ -68,8 +68,11 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
         if opt.hard_negative_start_epoch != -1 and epoch_i >= opt.hard_negative_start_epoch:
             model.set_hard_negative(True, opt.hard_pool_size)
         if opt.train_span_start_epoch != -1 and epoch_i >= opt.train_span_start_epoch:
-            model.set_train_st_ed(opt.lw_st_ed)
-
+            if len(opt.device_ids) > 1:
+                model.module.set_train_st_ed(opt.lw_st_ed)
+            else:
+                model.set_train_st_ed(opt.lw_st_ed)
+                
         # init meters
         loss_meters = OrderedDict(loss_st_ed=AverageMeter(), loss_fcl=AverageMeter(), loss_vcl=AverageMeter(),
                                 loss_neg_ctx=AverageMeter(), loss_neg_q=AverageMeter(),
@@ -131,7 +134,7 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                     logger.info("BEST " + line3)
                     checkpoint = {"model": model.state_dict(), "model_cfg": model.config, "epoch": epoch_i}
                     torch.save(checkpoint, opt.ckpt_filepath)
-                    logger.info("save checkpoint: ", opt.ckpt_filepath)
+                    logger.info("save checkpoint: {}".format(opt.ckpt_filepath))
                     print("~"*40)
 
                     
@@ -208,11 +211,11 @@ def start_training():
     
     # Prepare optimizer
     if opt.device.type == "cuda":
+        if len(opt.device_ids) > 1:
+            logger.info("Use multi GPU {}".format(opt.device_ids))
+            model = torch.nn.DataParallel(model, device_ids=opt.device_ids)  # use multi GPU
         logger.info("CUDA enabled.")
         model.to(opt.device)
-        if len(opt.device_ids) > 1:
-            logger.info("Use multi GPU", opt.device_ids)
-            model = torch.nn.DataParallel(model, device_ids=opt.device_ids)  # use multi GPU
 
     train(model, train_data_loader, val_data, test_data, context_data, opt, logger, writer)
     return opt.results_dir, opt.eval_split_name, opt.eval_path, opt.debug

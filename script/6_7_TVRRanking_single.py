@@ -20,7 +20,7 @@ for row in data:
                 "ts": row["timestamp"],
                 "desc": row["query"],
                 'type': 'v',
-                "desc_id":row["qid"],
+                "query_id":row["qid"],
                 "similarity": 0,
                 "caption": "placehold"
                 }
@@ -34,4 +34,4 @@ save_jsonl(single_data, "data/TVR_Ranking_10/test_mul.jsonl")
 
 # {"pid": 20, "qid": 10821, "query": "While a person is holding a man's right arm up, the man lifts his left arm and another person moves closer, the man looks up at the other person and then down.", "vname": "house_s08e11_seg02_clip_10", "timestamp": [41.4, 46.29], "duration": 89.02, "caption": "While a person is holding a man's right arm up, the man lifts his left arm and another person moves closer, the man looks up at the other person and then down.", "raw_match_scores": [5, 5], "similarity": 1.0000001192092896, "workers": ["03", "04"], "consensus": "Pass", "final_match_score": 5, "trimmed_variance": 0.0}
 
-# {"vid_name": "friends_s01e03_seg02_clip_19", "duration": 61.46, "ts": [16.48, 33.87], "desc": "Phoebe puts one of her ponytails in her mouth.", "type": "v", "desc_id": 90200}
+# {"vid_name": "friends_s01e03_seg02_clip_19", "duration": 61.46, "ts": [16.48, 33.87], "desc": "Phoebe puts one of her ponytails in her mouth.", "type": "v", "query_id": 90200}

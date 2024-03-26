@@ -19,7 +19,7 @@ class StartEndDataset(Dataset):
     Return:
         a dict: {
             "meta": {
-                "desc_id": int,
+                "query_id": int,
                 "desc": str,
                 "vid_name": str,
                 "duration": float,
@@ -85,11 +85,11 @@ class StartEndDataset(Dataset):
     def __getitem__(self, index):
         raw_data = self.data[index]
         # initialize with basic data
-        meta = dict(desc_id=raw_data["query_id"], desc=raw_data["query"], vid_name=raw_data["video_name"],
+        meta = dict(query_id=raw_data["query_id"], desc=raw_data["query"], vid_name=raw_data["video_name"],
                     duration=raw_data["duration"], ts=raw_data["timestamp"], simi=raw_data["similarity"], caption=raw_data["caption"])
         model_inputs = dict()
         model_inputs["simi"] = raw_data["similarity"]
-        model_inputs["query_feat"] = self.get_query_feat_by_desc_id(meta["desc_id"])
+        model_inputs["query_feat"] = self.get_query_feat_by_query_id(meta["query_id"])
 
         ctx_l = 0
         if self.use_video:
@@ -142,8 +142,8 @@ class StartEndDataset(Dataset):
         ed_idx = min(math.ceil(ts[1] / self.clip_length), max_idx)  # -1
         return torch.tensor([st_idx, ed_idx], dtype=torch.long)
 
-    def get_query_feat_by_desc_id(self, desc_id):
-        query_feat = self.desc_bert_h5[str(desc_id)][:self.max_desc_len]
+    def get_query_feat_by_query_id(self, query_id):
+        query_feat = self.desc_bert_h5[str(query_id)][:self.max_desc_len]
         if self.normalize_tfeat:
             query_feat = l2_normalize_np_array(query_feat)
         return torch.from_numpy(query_feat)
@@ -234,8 +234,8 @@ class StartEndEvalDataset(Dataset):
         else:
             return self._get_item_unique_query(index)
 
-    def get_query_feat_by_desc_id(self, desc_id):
-        query_feat = self.desc_bert_h5[str(desc_id)][:self.max_desc_len]
+    def get_query_feat_by_query_id(self, query_id):
+        query_feat = self.desc_bert_h5[str(query_id)][:self.max_desc_len]
         if self.normalize_tfeat:
             query_feat = l2_normalize_np_array(query_feat)
         return torch.from_numpy(query_feat)
@@ -244,10 +244,10 @@ class StartEndEvalDataset(Dataset):
     def _get_item_unique_query(self, index):
         """Need to batch"""
         raw_data = self.unique_query_data[index]
-        meta = dict(desc_id=raw_data["query_id"], desc=raw_data["query"],
+        meta = dict(query_id=raw_data["query_id"], desc=raw_data["query"],
                     vid_name=raw_data["video_name"] if self.load_gt_video else None)
         model_inputs = dict()
-        model_inputs["query_feat"] = self.get_query_feat_by_desc_id(meta["desc_id"])
+        model_inputs["query_feat"] = self.get_query_feat_by_query_id(meta["query_id"])
         return dict(meta=meta, model_inputs=model_inputs)
 
     def get_st_ed_label(self, ts, max_idx):
@@ -329,10 +329,46 @@ def start_end_collate(batch):
             match_labels[idx][st:(ed + 1)] = 1
         batched_data['match_labels'] = torch.tensor(match_labels, dtype=torch.long)
         
-    qids = [e["desc_id"] for e in batch_meta]
+    qids = [e["query_id"] for e in batch_meta]
     qids = np.array(qids)
     video_contrastive_mask = (qids[:, None] != qids).astype(int)
     batched_data["video_contrastive_mask"] =  torch.tensor(video_contrastive_mask)
+    return batch_meta, batched_data
+
+
+def context_collate(batch):
+    batch_meta = [e["meta"] for e in batch]
+    model_inputs_keys = batch[0]["model_inputs"].keys()
+    
+    batch_meta = [e["meta"] for e in batch]
+    
+    batched_data = dict()
+    if "simi" in batch[0]["model_inputs"]:
+        simis = [e["model_inputs"]["simi"] for e in batch]
+        batched_data["simi"] =  torch.tensor(simis)
+        
+    for k in model_inputs_keys:
+        if "feat" in k:
+            if k in ['video_feat', 'sub_feat', 'tef_feat']:
+                fixed_length = 128
+            else:
+                fixed_length = None
+            batched_data[k] = pad_sequences_1d([e["model_inputs"][k] for e in batch], dtype=torch.float32,
+                                               fixed_length=fixed_length)
+    fixed_length = 128
+    if "st_ed_indices" in model_inputs_keys:
+        st_ed_indices = [e["model_inputs"]["st_ed_indices"] for e in batch]
+        # construct moment localization labels
+        batched_data["st_ed_indices"] = torch.stack(st_ed_indices, dim=0)
+        # construct moment localization foreground and background labels
+        match_labels = np.zeros(shape=(len(st_ed_indices), fixed_length), dtype=np.int32)
+        for idx, st_ed_index in enumerate(st_ed_indices):
+            st_ed = st_ed_index.cpu().numpy()
+            st, ed = st_ed[0], st_ed[1]
+            match_labels[idx][st:(ed + 1)] = 1
+        batched_data['match_labels'] = torch.tensor(match_labels, dtype=torch.long)
+        
+    batched_data["video_contrastive_mask"] =  torch.ones(len(batch_meta), len(batch_meta))
     return batch_meta, batched_data
 
 

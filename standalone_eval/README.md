@@ -26,7 +26,7 @@ An example of such file is [sample_val_predictions.json](sample_val_predictions.
         ...
     },
     "VCMR": [{
-            "desc_id": 90200,
+            "query_id": 90200,
             "desc": "Phoebe puts one of her ponytails in her mouth.",
             "predictions": [
                 [19614, 9.0, 12.0, 1.7275],
@@ -38,7 +38,7 @@ An example of such file is [sample_val_predictions.json](sample_val_predictions.
         ...
     ],
     "SVMR": [{
-            "desc_id": 90200,
+            "query_id": 90200,
             "desc": "Phoebe puts one of her ponytails in her mouth.",
             "predictions": [
                 [20092, 36.0, 42.0, -1.9082],
@@ -50,7 +50,7 @@ An example of such file is [sample_val_predictions.json](sample_val_predictions.
         ...
     ],
     "VR": [{
-            "desc_id": 90200,
+            "query_id": 90200,
             "desc": "Phoebe puts one of her ponytails in her mouth.",
             "predictions": [
                 [19614, 0, 0, 1.7275],
@@ -76,7 +76,7 @@ Each dict in VCMR/SVMR/VR list is:
 ```
 {
     "desc": str,
-    "desc_id": int,
+    "query_id": int,
     "predictions": [[vid_id (int), st (float), ed (float), score (float)], ...]
 }
 ```

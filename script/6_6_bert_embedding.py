@@ -25,7 +25,7 @@ name = "./data/TVR_Ranking/query_bert2.h5"
 with h5py.File(name, "w") as h5file:
     for row in tqdm(all_data):
         query = row["desc"]
-        qid = str(row["desc_id"])
+        qid = str(row["query_id"])
         # Tokenize and encode the queries for BERT
         inputs = tokenizer(query, return_tensors="pt", padding=False, truncation=True, max_length=512).to(device)
 

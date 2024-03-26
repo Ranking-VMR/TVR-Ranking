@@ -37,7 +37,7 @@ def recall_iou_ndcg(pred_data, result_path, gt_path, T, K):
     ndcg_scores = []
     for i in tqdm(range(len(pred_data))):
         one_query_preds = pred_data[i]
-        qid = one_query_preds["desc_id"]
+        qid = one_query_preds["query_id"]
         one_query_preds = one_query_preds["predictions"]
         one_query_preds_df = pd.DataFrame(one_query_preds, columns=["vid", "start_time", "end_time", "model_scores"])
 

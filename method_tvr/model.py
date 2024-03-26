@@ -120,7 +120,7 @@ class ReLoCLNet(nn.Module):
             mid_video_q2ctx_scores, _ = torch.max(mid_video_q2ctx_scores, dim=1)
             mid_sub_q2ctx_scores, _ = torch.max(mid_sub_q2ctx_scores, dim=1)
             # exclude the contrastive loss for the same query
-            mid_q2ctx_scores = (mid_video_q2ctx_scores + mid_sub_q2ctx_scores) / 2.0  * video_contrastive_mask
+            mid_q2ctx_scores = (mid_video_q2ctx_scores + mid_sub_q2ctx_scores) / 2.0 # * video_contrastive_mask
             loss_vcl = self.nce_criterion(mid_q2ctx_scores)
             loss_vcl = self.config.lw_vcl * loss_vcl
         # moment localization loss

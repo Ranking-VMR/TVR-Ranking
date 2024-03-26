@@ -14,7 +14,7 @@ import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 from method_tvr.config import TestOptions
 from method_tvr.model import ReLoCLNet
-from method_tvr.start_end_dataset import start_end_collate, StartEndEvalDataset, prepare_batch_inputs
+from method_tvr.start_end_dataset import start_end_collate, context_collate, prepare_batch_inputs
 from utils.basic_utils import save_json, load_json
 from utils.temporal_nms import temporal_non_maximum_suppression
 from utils.tensor_utils import find_max_triples_from_upper_triangle_product
@@ -63,7 +63,7 @@ def post_processing_vcmr_nms(vcmr_res, nms_thd=0.6, max_before_nms=1000, max_aft
     vcmr_res: list(dict), each dict is
         {
             "desc": str,
-            "desc_id": int,
+            "query_id": int,
             "predictions": list(sublist)  # each sublist is
                 [video_idx (int), st (float), ed(float), score (float)], video_idx could be different
         }
@@ -81,7 +81,7 @@ def post_processing_svmr_nms(svmr_res, nms_thd=0.6, max_before_nms=1000, max_aft
     svmr_res: list(dict), each dict is
         {
             "desc": str,
-            "desc_id": int,
+            "query_id": int,
             "predictions": list(sublist)  # each sublist is
                 [video_idx (int), st (float), ed(float), score (float)], video_idx is the same.
          }
@@ -124,7 +124,7 @@ def compute_context_info(model, context_data, opt):
     """
     model.eval()
     # eval_dataset.set_data_mode("context")
-    context_dataloader = DataLoader(context_data, collate_fn=start_end_collate, batch_size=opt.eval_context_bsz,
+    context_dataloader = DataLoader(context_data, collate_fn=context_collate, batch_size=opt.eval_context_bsz,
                                     num_workers=opt.num_workers, shuffle=False, pin_memory=opt.pin_memory)
     metas = []  # list(dicts)
     video_feat, video_mask = [], []
@@ -280,16 +280,16 @@ def get_svmr_res_from_st_ed_probs(svmr_gt_st_probs, svmr_gt_ed_probs, query_meta
         _sorted_triples[:, :2] = _sorted_triples[:, :2] * clip_length
         # [video_idx(int), st(float), ed(float), score(float)]
         cur_ranked_predictions = [[video_idx, ] + row for row in _sorted_triples.tolist()]
-        cur_query_pred = dict(desc_id=q_m["desc_id"], desc=q_m["desc"], predictions=cur_ranked_predictions)
+        cur_query_pred = dict(query_id=q_m["query_id"], desc=q_m["desc"], predictions=cur_ranked_predictions)
         svmr_res.append(cur_query_pred)
     return svmr_res
 
 
 def load_external_vr_res2(external_vr_res_path, top_n_vr_videos=5):
-    """return a mapping from desc_id to top retrieved video info"""
+    """return a mapping from query_id to top retrieved video info"""
     external_vr_res = load_json(external_vr_res_path)
     external_vr_res = get_submission_top_n(external_vr_res, top_n=top_n_vr_videos)["VR"]
-    query2video = {e["desc_id"]: e["predictions"] for e in external_vr_res}
+    query2video = {e["query_id"]: e["predictions"] for e in external_vr_res}
     return query2video
 
 
@@ -340,7 +340,7 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
             _sorted_q2c_scores, _sorted_q2c_indices = torch.topk(_query_context_scores, max_n_videos, dim=1,
                                                                  largest=True)
         else:
-            relevant_video_info = [external_query2video[qm["desc_id"]] for qm in _query_metas]
+            relevant_video_info = [external_query2video[qm["query_id"]] for qm in _query_metas]
             _sorted_q2c_indices = _query_context_scores.new_tensor([[video_idx2meta_idx[sub_e[0]] for sub_e in e]
                                                                     for e in relevant_video_info], dtype=torch.long)
             _sorted_q2c_scores = _query_context_scores.new_tensor([[sub_e[3] for sub_e in e]
@@ -388,7 +388,7 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
             video_idx = video2idx[video_metas[v_meta_idx]["vid_name"]]
             cur_vcmr_redictions.append([video_idx, float(pred_st_in_seconds[j]), float(pred_ed_in_seconds[j]),
                                         float(v_score)])
-        cur_query_pred = dict(desc_id=query_metas[i]["desc_id"], desc=query_metas[i]["desc"],
+        cur_query_pred = dict(query_id=query_metas[i]["query_id"], desc=query_metas[i]["desc"],
                                 predictions=cur_vcmr_redictions)
         vcmr_res.append(cur_query_pred)
     return vcmr_res

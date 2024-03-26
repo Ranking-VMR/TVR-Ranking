@@ -41,7 +41,7 @@ ndcg_scores = []
 ###### ------------------ #######
 for i in tqdm(range(len(pred_data["VCMR"]))):
     one_query_preds = pred_data["VCMR"][i]
-    qid = one_query_preds["desc_id"]
+    qid = one_query_preds["query_id"]
     query = one_query_preds["desc"]
     one_query_preds = one_query_preds["predictions"]
     one_query_preds_df = pd.DataFrame(one_query_preds, columns=["vid", "start_time", "end_time", "model_scores"])

@@ -97,7 +97,7 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
         video2idx: {vid_name (str): index (int), ...}
         moment_predictions: list(dict), each dict is {
             "desc": str,
-            "desc_id": int,
+            "query_id": int,
             "predictions": [vid_name_idx (int), st (float), ed (float), score (float)] * n_pred,
                 sorted predictions, n_pred could be different for all dicts. For each prediction,
                 only the first 3 elements [vid_name (str), st (float), ed (float),] are used,
@@ -105,7 +105,7 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
         }
         ground_truth: list(dict), each dict is {
             "desc": str,
-            "desc_id": int,
+            "query_id": int,
             "type": str, one of [v, t, vt]
             "vid_name": str
             "ts": [st (float), ed (float)], or list([st (float), ed (float)]), len == 4.
@@ -126,23 +126,23 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
         print("Running evaluation with task_type {}, n results {}; n gt {}"
               .format(task_type, len(moment_predictions), len(ground_truth)))
 
-    predictions_by_desc_id = {e["desc_id"]: e for e in moment_predictions}
-    gt_by_desc_id = {e["desc_id"]: e for e in ground_truth}
+    predictions_by_query_id = {e["query_id"]: e for e in moment_predictions}
+    gt_by_query_id = {e["query_id"]: e for e in ground_truth}
     desc_type2idx = {"v": 0, "t": 1, "vt": 2}
     desc_types = []  # n_desc
 
     if match_number:
-        assert set(gt_by_desc_id.keys()) == set(predictions_by_desc_id.keys()), \
-            "desc_ids in predictions and ground_truth must match"
-    # assert len(set([len(e["predictions"]) for e in predictions_by_desc_id.values()])) == 1, \
+        assert set(gt_by_query_id.keys()) == set(predictions_by_query_id.keys()), \
+            "query_ids in predictions and ground_truth must match"
+    # assert len(set([len(e["predictions"]) for e in predictions_by_query_id.values()])) == 1, \
     #     "all queries must have the same number of predictions"
 
     pred_info_matrix_collection = []
-    for k, gt_item in tqdm(gt_by_desc_id.items(), desc="Loop over moments", leave=False):
-        if not match_number and k not in predictions_by_desc_id:
+    for k, gt_item in tqdm(gt_by_query_id.items(), desc="Loop over moments", leave=False):
+        if not match_number and k not in predictions_by_query_id:
             continue
         pred_info_matrix = np.array(
-            [e[:3] for e in predictions_by_desc_id[k]["predictions"]][:max_pred_per_query],
+            [e[:3] for e in predictions_by_query_id[k]["predictions"]][:max_pred_per_query],
             dtype=np.float32)  # (n_pred, 3)
         if use_desc_type:
             desc_types.append(desc_type2idx[gt_item["type"]])

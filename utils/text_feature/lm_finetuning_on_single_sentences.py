@@ -151,7 +151,7 @@ class SingleSentenceDataset(Dataset):
 
 
 def load_preprocess_tvr_query(tvr_file_path):
-    return [dict(id=e["desc_id"], text=e["desc"]) for e in load_jsonl(tvr_file_path)]
+    return [dict(id=e["query_id"], text=e["desc"]) for e in load_jsonl(tvr_file_path)]
 
 
 def extract_concat_sub_text(sub_info):

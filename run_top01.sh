@@ -21,7 +21,7 @@
       --eval_tasks_at_training VCMR \
       --eval_num_per_epoch 0.2 \
       --n_epoch 1000 \
-      --exp_id top_01
-
+      --exp_id top01
+      
       # qsub -I -l select=1:ngpus=1 -P gs_slab -q slab_gpu8
       # cd 11_TVR-Ranking/ReLoCLNet/; conda activate py11; sh run_top01.sh 

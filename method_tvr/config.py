@@ -34,7 +34,7 @@ class BaseOptions(object):
         self.parser.add_argument("--seed", type=int, default=2024, help="random seed")
         self.parser.add_argument("--device", type=int, default=0, help="0 cuda, -1 cpu")
         self.parser.add_argument("--device_ids", type=int, nargs="+", default=[0], help="GPU ids to run the job")
-        self.parser.add_argument("--num_workers", type=int, default=8,
+        self.parser.add_argument("--num_workers", type=int, default=4,
                                  help="num subprocesses used to load the data, 0: use main process")
         self.parser.add_argument("--no_core_driver", action="store_true",
                                  help="hdf5 driver, default use `core` (load into RAM), if specified, use `None`")
@@ -124,7 +124,7 @@ class BaseOptions(object):
                                  help="additionally use non-maximum suppression (or non-minimum suppression for "
                                       "distance) to post-processing the predictions. -1: do not use nms. 0.6 for "
                                       "charades_sta, 0.5 for anet_cap")
-        self.parser.add_argument("--eval_num_per_epoch", type=int, default=10, help="eval times during each epoch")
+        self.parser.add_argument("--eval_num_per_epoch", type=float, default=1.0, help="eval times during each epoch")
         self.parser.add_argument("--model_name", type=str)
 
     def display_save(self, opt):
@@ -161,8 +161,7 @@ class BaseOptions(object):
             if opt.clip_length is None:
                 opt.clip_length = ProposalConfigs[opt.dset_name]["clip_length"]
                 print("Loaded clip_length {} from proposal config file".format(opt.clip_length))
-            opt.results_dir = os.path.join(opt.results_root, "-".join([opt.dset_name, opt.ctx_mode, opt.exp_id,
-                                                                       time.strftime("%Y_%m_%d_%H_%M_%S")]))
+            opt.results_dir = os.path.join(opt.results_root, "_".join([opt.model_name, opt.exp_id, time.strftime("%Y%m%d_%H%M%S")]))
             mkdirp(opt.results_dir)
             # save a copy of current code
             code_dir = os.path.dirname(os.path.realpath(__file__))

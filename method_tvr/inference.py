@@ -18,8 +18,8 @@ from method_tvr.start_end_dataset import start_end_collate, StartEndEvalDataset,
 from utils.basic_utils import save_json, load_json
 from utils.temporal_nms import temporal_non_maximum_suppression
 from utils.tensor_utils import find_max_triples_from_upper_triangle_product
-from standalone_eval.eval import eval_retrieval
-from method_tvr.init_dataset import get_train_data_loader, get_eval_data
+from standalone_eval.eval import eval_vcmr_retrieval
+from method_tvr.init_dataset import get_train_data, get_eval_data
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(asctime)s.%(msecs)03d:%(levelname)s:%(name)s - %(message)s",
@@ -94,20 +94,27 @@ def post_processing_svmr_nms(svmr_res, nms_thd=0.6, max_before_nms=1000, max_aft
         processed_svmr_res.append(e)
     return processed_svmr_res
 
+def get_prediction_top_n(list_dict_predictions, top_n):
+    top_n_res = []
+    for e in list_dict_predictions:
+        e["predictions"] = e["predictions"][:top_n]
+        top_n_res.append(e)
+    return top_n_res
 
-def get_submission_top_n(submission, top_n=100):
-    def get_prediction_top_n(list_dict_predictions, top_n_):
-        top_n_res = []
-        for e in list_dict_predictions:
-            e["predictions"] = e["predictions"][:top_n_]
-            top_n_res.append(e)
-        return top_n_res
 
-    top_n_submission = dict(video2idx=submission["video2idx"], )
-    for k in submission:
-        if k != "video2idx":
-            top_n_submission[k] = get_prediction_top_n(submission[k], top_n)
-    return top_n_submission
+# def get_submission_top_n(submission, top_n=100):
+#     def get_prediction_top_n(list_dict_predictions, top_n_):
+#         top_n_res = []
+#         for e in list_dict_predictions:
+#             e["predictions"] = e["predictions"][:top_n_]
+#             top_n_res.append(e)
+#         return top_n_res
+
+#     top_n_submission = dict(video2idx=submission["video2idx"], )
+#     for k in submission:
+#         if k != "video2idx":
+#             top_n_submission[k] = get_prediction_top_n(submission[k], top_n)
+#     return top_n_submission
 
 
 def compute_context_info(model, context_data, opt):
@@ -168,58 +175,56 @@ def index_if_not_none(input_tensor, indices):
         return input_tensor[indices]
 
 
-def compute_query2ctx_info_svmr_only(model, eval_dataset, opt, ctx_info, max_before_nms=1000):
-    """Use val set to do evaluation, remember to run with torch.no_grad().
-    estimated size 20,000 (query) * 500 (hsz) * 4 / (1024**2) = 38.15 MB
-    max_n_videos: int, use max_n_videos videos for computing VCMR results
-    """
-    model.eval()
-    eval_dataset.set_data_mode("query")
-    eval_dataset.load_gt_vid_name_for_query(True)
-    query_eval_loader = DataLoader(eval_dataset, collate_fn=start_end_collate, batch_size=opt.eval_query_bsz,
-                                   num_workers=opt.num_workers, shuffle=False, pin_memory=opt.pin_memory)
-    video2idx = eval_dataset.video2idx
-    video_metas = ctx_info["video_metas"]
-    n_total_query = len(eval_dataset)
-    bsz = opt.eval_query_bsz
-    ctx_len = eval_dataset.max_ctx_len  # all pad to this length
+# def compute_query2ctx_info_svmr_only(model, eval_dataset, opt, ctx_info, max_before_nms=1000):
+#     """Use val set to do evaluation, remember to run with torch.no_grad().
+#     estimated size 20,000 (query) * 500 (hsz) * 4 / (1024**2) = 38.15 MB
+#     max_n_videos: int, use max_n_videos videos for computing VCMR results
+#     """
+#     model.eval()
+#     eval_dataset.set_data_mode("query")
+#     eval_dataset.load_gt_vid_name_for_query(True)
+#     query_eval_loader = DataLoader(eval_dataset, collate_fn=start_end_collate, batch_size=opt.eval_query_bsz,
+#                                    num_workers=opt.num_workers, shuffle=False, pin_memory=opt.pin_memory)
+#     video2idx = eval_dataset.video2idx
+#     video_metas = ctx_info["video_metas"]
+#     n_total_query = len(eval_dataset)
+#     bsz = opt.eval_query_bsz
+#     ctx_len = eval_dataset.max_ctx_len  # all pad to this length
 
-    svmr_video2meta_idx = {e["vid_name"]: idx for idx, e in enumerate(video_metas)}
-    svmr_gt_st_probs = np.zeros((n_total_query, ctx_len), dtype=np.float32)
-    svmr_gt_ed_probs = np.zeros((n_total_query, ctx_len), dtype=np.float32)
+#     svmr_video2meta_idx = {e["vid_name"]: idx for idx, e in enumerate(video_metas)}
+#     svmr_gt_st_probs = np.zeros((n_total_query, ctx_len), dtype=np.float32)
+#     svmr_gt_ed_probs = np.zeros((n_total_query, ctx_len), dtype=np.float32)
 
-    query_metas = []
-    for idx, batch in tqdm(
-            enumerate(query_eval_loader), desc="Computing q embedding", total=len(query_eval_loader)):
-        _query_metas = batch[0]
-        query_metas.extend(batch[0])
-        model_inputs = prepare_batch_inputs(batch[1], device=opt.device, non_blocking=opt.pin_memory)
-        # query_context_scores (_N_q, N_videos), st_prob, ed_prob (_N_q, L)
-        query2video_meta_indices = torch.tensor([svmr_video2meta_idx[e["vid_name"]] for e in _query_metas],
-                                                dtype=torch.long, requires_grad=False)
-        _query_context_scores, _st_probs, _ed_probs = \
-            model.get_pred_from_raw_query(model_inputs["query_feat"], model_inputs["query_mask"],
-                                          index_if_not_none(ctx_info["video_feat"], query2video_meta_indices),
-                                          index_if_not_none(ctx_info["video_mask"], query2video_meta_indices),
-                                          index_if_not_none(ctx_info["sub_feat"], query2video_meta_indices),
-                                          index_if_not_none(ctx_info["sub_mask"], query2video_meta_indices),
-                                          cross=False)
-        _query_context_scores = _query_context_scores + 1  # move cosine similarity to [0, 2]
+#     query_metas = []
+#     for idx, batch in tqdm(
+#             enumerate(query_eval_loader), desc="Computing q embedding", total=len(query_eval_loader)):
+#         _query_metas = batch[0]
+#         query_metas.extend(batch[0])
+#         model_inputs = prepare_batch_inputs(batch[1], device=opt.device, non_blocking=opt.pin_memory)
+#         # query_context_scores (_N_q, N_videos), st_prob, ed_prob (_N_q, L)
+#         query2video_meta_indices = torch.tensor([svmr_video2meta_idx[e["vid_name"]] for e in _query_metas],
+#                                                 dtype=torch.long, requires_grad=False)
+#         _query_context_scores, _st_probs, _ed_probs = \
+#             model.get_pred_from_raw_query(model_inputs["query_feat"], model_inputs["query_mask"],
+#                                           index_if_not_none(ctx_info["video_feat"], query2video_meta_indices),
+#                                           index_if_not_none(ctx_info["video_mask"], query2video_meta_indices),
+#                                           index_if_not_none(ctx_info["sub_feat"], query2video_meta_indices),
+#                                           index_if_not_none(ctx_info["sub_mask"], query2video_meta_indices),
+#                                           cross=False)
+#         _query_context_scores = _query_context_scores + 1  # move cosine similarity to [0, 2]
 
-        # normalize to get true probabilities!!!
-        # the probabilities here are already (pad) masked, so only need to do softmax
-        _st_probs = F.softmax(_st_probs, dim=-1)  # (_N_q, L)
-        _ed_probs = F.softmax(_ed_probs, dim=-1)
+#         # normalize to get true probabilities!!!
+#         # the probabilities here are already (pad) masked, so only need to do softmax
+#         _st_probs = F.softmax(_st_probs, dim=-1)  # (_N_q, L)
+#         _ed_probs = F.softmax(_ed_probs, dim=-1)
 
-        svmr_gt_st_probs[idx * bsz:(idx + 1) * bsz, :_st_probs.shape[1]] = _st_probs.cpu().numpy()
-        svmr_gt_ed_probs[idx * bsz:(idx + 1) * bsz, :_ed_probs.shape[1]] = _ed_probs.cpu().numpy()
+#         svmr_gt_st_probs[idx * bsz:(idx + 1) * bsz, :_st_probs.shape[1]] = _st_probs.cpu().numpy()
+#         svmr_gt_ed_probs[idx * bsz:(idx + 1) * bsz, :_ed_probs.shape[1]] = _ed_probs.cpu().numpy()
 
-        if opt.debug:
-            break
-    svmr_res = get_svmr_res_from_st_ed_probs(svmr_gt_st_probs, svmr_gt_ed_probs, query_metas, video2idx,
-                                             clip_length=opt.clip_length, min_pred_l=opt.min_pred_l,
-                                             max_pred_l=opt.max_pred_l, max_before_nms=max_before_nms)
-    return dict(SVMR=svmr_res)
+#     svmr_res = get_svmr_res_from_st_ed_probs(svmr_gt_st_probs, svmr_gt_ed_probs, query_metas, video2idx,
+#                                              clip_length=opt.clip_length, min_pred_l=opt.min_pred_l,
+#                                              max_pred_l=opt.max_pred_l, max_before_nms=max_before_nms)
+#     return dict(SVMR=svmr_res)
 
 
 def generate_min_max_length_mask(array_shape, min_l, max_l):
@@ -288,44 +293,29 @@ def load_external_vr_res2(external_vr_res_path, top_n_vr_videos=5):
     return query2video
 
 
-def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=1000, max_n_videos=100, tasks=("SVMR",)):
+def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=1000, max_n_videos=100 ):
     """Use val set to do evaluation, remember to run with torch.no_grad().
     estimated size 20,000 (query) * 500 (hsz) * 4 / (1024**2) = 38.15 MB
     max_n_videos: int, use max_n_videos videos for computing VCMR/VR results
     """
-    is_svmr = "SVMR" in tasks
-    is_vr = "VR" in tasks
-    is_vcmr = "VCMR" in tasks
     video2idx = eval_dataset.video2idx
     video_metas = ctx_info["video_metas"]
     video_idx2meta_idx = None
     external_query2video = None
     model.eval()
     eval_dataset.set_data_mode("query")
-    eval_dataset.load_gt_vid_name_for_query(is_svmr)
+    # eval_dataset.load_gt_vid_name_for_query(is_svmr)
     query_eval_loader = DataLoader(eval_dataset, collate_fn=start_end_collate, batch_size=opt.eval_query_bsz,
                                    num_workers=opt.num_workers, shuffle=False, pin_memory=opt.pin_memory)
     n_total_query = len(eval_dataset)
     bsz = opt.eval_query_bsz
 
-    if is_vcmr:
-        flat_st_ed_scores_sorted_indices = np.empty((n_total_query, max_before_nms), dtype=np.int32)
-        flat_st_ed_sorted_scores = np.zeros((n_total_query, max_before_nms), dtype=np.float32)
-    else:
-        flat_st_ed_scores_sorted_indices, flat_st_ed_sorted_scores = None, None
-
-    if is_vr or is_vcmr:
-        sorted_q2c_indices = np.empty((n_total_query, max_n_videos), dtype=np.int32)
-        sorted_q2c_scores = np.empty((n_total_query, max_n_videos), dtype=np.float32)
-    else:
-        sorted_q2c_indices, sorted_q2c_scores = None, None
-
-    if is_svmr:
-        svmr_video2meta_idx = {e["vid_name"]: idx for idx, e in enumerate(video_metas)}
-        svmr_gt_st_probs = np.zeros((n_total_query, opt.max_ctx_l), dtype=np.float32)
-        svmr_gt_ed_probs = np.zeros((n_total_query, opt.max_ctx_l), dtype=np.float32)
-    else:
-        svmr_video2meta_idx, svmr_gt_st_probs, svmr_gt_ed_probs = None, None, None
+    # VCMR
+    flat_st_ed_scores_sorted_indices = np.empty((n_total_query, max_before_nms), dtype=np.int32)
+    flat_st_ed_sorted_scores = np.zeros((n_total_query, max_before_nms), dtype=np.float32)
+    sorted_q2c_indices = np.empty((n_total_query, max_n_videos), dtype=np.int32)
+    sorted_q2c_scores = np.empty((n_total_query, max_n_videos), dtype=np.float32)
+    
 
     query_metas = []
     for idx, batch in tqdm(enumerate(query_eval_loader), desc="Computing q embedding", total=len(query_eval_loader)):
@@ -344,17 +334,6 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
         _st_probs = F.softmax(_st_probs, dim=-1)  # (_N_q, N_videos, L)
         _ed_probs = F.softmax(_ed_probs, dim=-1)
 
-        if is_svmr:  # collect SVMR data
-            row_indices = torch.arange(0, len(_st_probs))
-            query2video_meta_indices = torch.tensor([svmr_video2meta_idx[e["vid_name"]] for e in _query_metas],
-                                                    dtype=torch.long)
-            svmr_gt_st_probs[idx * bsz:(idx + 1) * bsz, :_st_probs.shape[2]] = \
-                _st_probs[row_indices, query2video_meta_indices].cpu().numpy()
-            svmr_gt_ed_probs[idx * bsz:(idx + 1) * bsz, :_ed_probs.shape[2]] = \
-                _ed_probs[row_indices, query2video_meta_indices].cpu().numpy()
-
-        if not (is_vr or is_vcmr):
-            continue
 
         # Get top-max_n_videos videos for each query
         if external_query2video is None:
@@ -371,10 +350,6 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
         sorted_q2c_indices[idx * bsz:(idx + 1) * bsz] = _sorted_q2c_indices.cpu().numpy()
         sorted_q2c_scores[idx * bsz:(idx + 1) * bsz] = _sorted_q2c_scores.cpu().numpy()
 
-        if not is_vcmr:
-            continue
-        # Get VCMR results
-        # compute combined scores
         row_indices = torch.arange(0, len(_st_probs), device=opt.device).unsqueeze(1)
         _st_probs = _st_probs[row_indices, _sorted_q2c_indices]  # (_N_q, max_n_videos, L)
         _ed_probs = _ed_probs[row_indices, _sorted_q2c_indices]
@@ -395,106 +370,86 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
         if opt.debug:
             break
 
-    svmr_res = []
-    if is_svmr:
-        svmr_res = get_svmr_res_from_st_ed_probs(svmr_gt_st_probs, svmr_gt_ed_probs, query_metas, video2idx,
-                                                 clip_length=opt.clip_length, min_pred_l=opt.min_pred_l,
-                                                 max_pred_l=opt.max_pred_l, max_before_nms=max_before_nms)
-    vr_res = []
-    if is_vr:
-        for i, (_sorted_q2c_scores_row, _sorted_q2c_indices_row) in tqdm(
-                enumerate(zip(sorted_q2c_scores[:, :100], sorted_q2c_indices[:, :100])),
-                desc="[VR] Loop over queries to generate predictions", total=n_total_query):
-            cur_vr_redictions = []
-            for j, (v_score, v_meta_idx) in enumerate(zip(_sorted_q2c_scores_row, _sorted_q2c_indices_row)):
-                video_idx = video2idx[video_metas[v_meta_idx]["vid_name"]]
-                cur_vr_redictions.append([video_idx, 0, 0, float(v_score)])
-            cur_query_pred = dict(desc_id=query_metas[i]['desc_id'], desc=query_metas[i]["desc"],
-                                  predictions=cur_vr_redictions)
-            vr_res.append(cur_query_pred)
 
     vcmr_res = []
-    if is_vcmr:
-        for i, (_flat_st_ed_scores_sorted_indices, _flat_st_ed_sorted_scores) in tqdm(
-                enumerate(zip(flat_st_ed_scores_sorted_indices, flat_st_ed_sorted_scores)),
-                desc="[VCMR] Loop over queries to generate predictions", total=n_total_query):  # i is query_idx
-            # list([video_idx(int), st(float), ed(float), score(float)])
-            video_meta_indices_local, pred_st_indices, pred_ed_indices = np.unravel_index(
-                _flat_st_ed_scores_sorted_indices, shape=(max_n_videos, opt.max_ctx_l, opt.max_ctx_l))
-            # video_meta_indices_local refers to the indices among the top-max_n_videos
-            # video_meta_indices refers to the indices in all the videos, which is the True indices
-            video_meta_indices = sorted_q2c_indices[i, video_meta_indices_local]
-            pred_st_in_seconds = pred_st_indices.astype(np.float32) * opt.clip_length
-            pred_ed_in_seconds = pred_ed_indices.astype(np.float32) * opt.clip_length  # + opt.clip_length
-            cur_vcmr_redictions = []
-            for j, (v_meta_idx, v_score) in enumerate(zip(video_meta_indices, _flat_st_ed_sorted_scores)):  # videos
-                video_idx = video2idx[video_metas[v_meta_idx]["vid_name"]]
-                cur_vcmr_redictions.append([video_idx, float(pred_st_in_seconds[j]), float(pred_ed_in_seconds[j]),
-                                            float(v_score)])
-            cur_query_pred = dict(desc_id=query_metas[i]["desc_id"], desc=query_metas[i]["desc"],
-                                  predictions=cur_vcmr_redictions)
-            vcmr_res.append(cur_query_pred)
-
-    res = dict(SVMR=svmr_res, VCMR=vcmr_res, VR=vr_res)
-    return {k: v for k, v in res.items() if len(v) != 0}
+    for i, (_flat_st_ed_scores_sorted_indices, _flat_st_ed_sorted_scores) in tqdm(
+            enumerate(zip(flat_st_ed_scores_sorted_indices, flat_st_ed_sorted_scores)),
+            desc="[VCMR] Loop over queries to generate predictions", total=n_total_query):  # i is query_idx
+        # list([video_idx(int), st(float), ed(float), score(float)])
+        video_meta_indices_local, pred_st_indices, pred_ed_indices = np.unravel_index(
+            _flat_st_ed_scores_sorted_indices, shape=(max_n_videos, opt.max_ctx_l, opt.max_ctx_l))
+        # video_meta_indices_local refers to the indices among the top-max_n_videos
+        # video_meta_indices refers to the indices in all the videos, which is the True indices
+        video_meta_indices = sorted_q2c_indices[i, video_meta_indices_local]
+        pred_st_in_seconds = pred_st_indices.astype(np.float32) * opt.clip_length
+        pred_ed_in_seconds = pred_ed_indices.astype(np.float32) * opt.clip_length  # + opt.clip_length
+        cur_vcmr_redictions = []
+        for j, (v_meta_idx, v_score) in enumerate(zip(video_meta_indices, _flat_st_ed_sorted_scores)):  # videos
+            video_idx = video2idx[video_metas[v_meta_idx]["vid_name"]]
+            cur_vcmr_redictions.append([video_idx, float(pred_st_in_seconds[j]), float(pred_ed_in_seconds[j]),
+                                        float(v_score)])
+        cur_query_pred = dict(desc_id=query_metas[i]["desc_id"], desc=query_metas[i]["desc"],
+                                predictions=cur_vcmr_redictions)
+        vcmr_res.append(cur_query_pred)
+    return vcmr_res
 
 
-def get_eval_res(model,  eval_dataset, context_data, opt, tasks):
+def get_eval_res(model,  eval_dataset, context_data, opt):
     """compute and save query and video proposal embeddings"""
     context_info = compute_context_info(model, context_data, opt)
-    for k, v in context_info.items():
-        print(k, len(v))
-        
     eval_res = compute_query2ctx_info(model, eval_dataset, opt, context_info, max_before_nms=opt.max_before_nms,
-                                        max_n_videos=opt.max_vcmr_video, tasks=tasks)
-
-    eval_res["video2idx"] = eval_dataset.video2idx
+                                       max_n_videos=opt.max_vcmr_video)
     return eval_res
 
 
 POST_PROCESSING_MMS_FUNC = {"SVMR": post_processing_svmr_nms, "VCMR": post_processing_vcmr_nms}
 
-def eval_epoch(model, eval_dataset, context_data, logger, opt, save_submission_filename, tasks=("SVMR",), max_after_nms=100):
+import pdb
+from ndcg_iou_topk import recall_iou_ndcg
+
+
+
+def eval_epoch(model, eval_dataset, context_data, logger, opt, max_after_nms, iou_thds, topks):
     """max_after_nms: always set to 100, since the eval script only evaluate top-100"""
+    # IOU_THDS = (0.3, 0.5, 0.7)
+    
     model.eval()
-    eval_submission_raw = get_eval_res(model, eval_dataset, context_data, opt, tasks)
+    eval_res = get_eval_res(model, eval_dataset, context_data, opt)
+    video2idx = eval_dataset.video2idx
+    pred_data = get_prediction_top_n(eval_res, top_n=max_after_nms)
+    gt_data = eval_dataset.all_query_data
+    average_ndcg = recall_iou_ndcg(pred_data, gt_data, video2idx, iou_thds, topks)
+    # average_recall = eval_vcmr_retrieval(pred_data, gt_data, video2idx, iou_thds)
+    # metrics = eval_ranked_retrieval(eval_submission, eval_dataset.query_data, iou_thds=IOU_THDS,
+    #                         match_number=not opt.debug, verbose=opt.debug, use_desc_type=opt.dset_name == "tvr")
 
-    IOU_THDS = (0.3, 0.5, 0.7)  
-    logger.info("Saving/Evaluating before nms results")
-    submission_path = os.path.join(opt.results_dir, save_submission_filename)
-    eval_submission = get_submission_top_n(eval_submission_raw, top_n=max_after_nms)
-    save_json(eval_submission, submission_path)
+    # save_metrics_path = submission_path.replace(".json", "_metrics.json")
+    # save_json(metrics, save_metrics_path, save_pretty=True, sort_keys=False)
+    # latest_file_paths = [submission_path, save_metrics_path]
 
-    if opt.eval_split_name == "val":  # since test_public has no GT
-        metrics = eval_retrieval(eval_submission, eval_dataset.query_data, iou_thds=IOU_THDS,
-                                 match_number=not opt.debug, verbose=opt.debug, use_desc_type=opt.dset_name == "tvr")
-        save_metrics_path = submission_path.replace(".json", "_metrics.json")
-        save_json(metrics, save_metrics_path, save_pretty=True, sort_keys=False)
-        latest_file_paths = [submission_path, save_metrics_path]
-
-    if opt.nms_thd != -1:
-        logger.info("Performing nms with nms_thd {}".format(opt.nms_thd))
-        eval_submission_after_nms = dict(video2idx=eval_submission_raw["video2idx"])
-        for k, nms_func in POST_PROCESSING_MMS_FUNC.items():
-            if k in eval_submission_raw:
-                eval_submission_after_nms[k] = nms_func(eval_submission_raw[k], nms_thd=opt.nms_thd,
-                                                        max_before_nms=opt.max_before_nms, max_after_nms=max_after_nms)
-        logger.info("Saving/Evaluating nms results")
-        submission_nms_path = submission_path.replace(".json", "_nms_thd_{}.json".format(opt.nms_thd))
-        save_json(eval_submission_after_nms, submission_nms_path)
-        if opt.eval_split_name == "val":
+    # if opt.nms_thd != -1:
+    #     logger.info("Performing nms with nms_thd {}".format(opt.nms_thd))
+    #     eval_submission_after_nms = dict(video2idx=eval_submission_raw["video2idx"])
+    #     for k, nms_func in POST_PROCESSING_MMS_FUNC.items():
+    #         if k in eval_submission_raw:
+    #             eval_submission_after_nms[k] = nms_func(eval_submission_raw[k], nms_thd=opt.nms_thd,
+    #                                                     max_before_nms=opt.max_before_nms, max_after_nms=max_after_nms)
+    #     logger.info("Saving/Evaluating nms results")
+    #     submission_nms_path = submission_path.replace(".json", "_nms_thd_{}.json".format(opt.nms_thd))
+    #     save_json(eval_submission_after_nms, submission_nms_path)
+    #     if opt.eval_split_name == "val":
             
-            metrics_nms = eval_retrieval(eval_submission_after_nms, eval_dataset.query_data, iou_thds=IOU_THDS,
-                                         match_number=not opt.debug, verbose=opt.debug)
-            save_metrics_nms_path = submission_nms_path.replace(".json", "_metrics.json")
-            save_json(metrics_nms, save_metrics_nms_path, save_pretty=True, sort_keys=False)
-            latest_file_paths += [submission_nms_path, save_metrics_nms_path]
-        else:
-            metrics_nms = None
-            latest_file_paths = [submission_nms_path, ]
-    else:
-        metrics_nms = None
-    return metrics, metrics_nms, latest_file_paths
+    #         metrics_nms = eval_retrieval(eval_submission_after_nms, eval_dataset.query_data, iou_thds=IOU_THDS,
+    #                                      match_number=not opt.debug, verbose=opt.debug)
+    #         save_metrics_nms_path = submission_nms_path.replace(".json", "_metrics.json")
+    #         save_json(metrics_nms, save_metrics_nms_path, save_pretty=True, sort_keys=False)
+    #         latest_file_paths += [submission_nms_path, save_metrics_nms_path]
+    #     else:
+    #         metrics_nms = None
+    #         latest_file_paths = [submission_nms_path, ]
+    # else:
+    #     metrics_nms = None
+    return average_ndcg, pred_data
 
 
 def setup_model(opt):

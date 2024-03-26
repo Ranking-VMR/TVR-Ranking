@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 from utils.basic_utils import load_jsonl, load_json, l2_normalize_np_array, uniform_feature_sampling
 from utils.tensor_utils import pad_sequences_1d
 from method_tvr.config import BaseOptions
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,6 @@ class StartEndDataset(Dataset):
             else:  # str path
                 self.vid_feat_h5 = h5py.File(vid_feat_path_or_handler, "r", driver=h5driver)
 
-        print(desc_bert_path_or_handler)
-        print("-----------------")
         if isinstance(desc_bert_path_or_handler, h5py.File):
             self.desc_bert_h5 = desc_bert_path_or_handler
         else:
@@ -150,6 +149,8 @@ class StartEndDataset(Dataset):
         return torch.from_numpy(query_feat)
 
 
+
+
 class StartEndEvalDataset(Dataset):
     """
     init_data_mode: `video_query` or `video_only` or `query_only`,
@@ -204,34 +205,34 @@ class StartEndEvalDataset(Dataset):
             else:  # str path
                 self.sub_bert_h5 = h5py.File(sub_bert_path_or_handler, "r", driver=h5driver)
 
-        self.query_data = load_jsonl(data_path)
-        if data_ratio != 1:
-            n_examples = int(len(self.query_data) * data_ratio)
-            self.query_data = self.query_data[:n_examples]
-            logger.info("Using {}% of the data: {} examples".format(data_ratio * 100, n_examples))
+        self.all_query_data = load_jsonl(data_path)
+        df = pd.DataFrame(self.all_query_data)
+        df = df.drop_duplicates(subset='query_id', keep='first')
+        self.unique_query_data = df.to_dict(orient='records')
+
 
     def set_data_mode(self, data_mode):
         """context or query"""
         assert data_mode in ["context", "query"]
         self.data_mode = data_mode
 
-    def load_gt_vid_name_for_query(self, load_gt_video):
-        """load_gt_video: bool, affect the returned value of self._get_item_query"""
-        if load_gt_video:
-            assert "vid_name" in self.query_data[0]
-        self.load_gt_video = load_gt_video
+    # def load_gt_vid_name_for_query(self, load_gt_video):
+    #     """load_gt_video: bool, affect the returned value of self._get_item_query"""
+    #     if load_gt_video:
+    #         assert "vid_name" in self.query_data[0]
+    #     self.load_gt_video = load_gt_video
 
     def __len__(self):
         if self.data_mode == "context":
             return len(self.video_data)
         else:
-            return len(self.query_data)
+            return len(self.unique_query_data)
 
     def __getitem__(self, index):
         if self.data_mode == "context":
             return self._get_item_context(index)
         else:
-            return self._get_item_query(index)
+            return self._get_item_unique_query(index)
 
     def get_query_feat_by_desc_id(self, desc_id):
         query_feat = self.desc_bert_h5[str(desc_id)][:self.max_desc_len]
@@ -239,9 +240,10 @@ class StartEndEvalDataset(Dataset):
             query_feat = l2_normalize_np_array(query_feat)
         return torch.from_numpy(query_feat)
 
-    def _get_item_query(self, index):
+
+    def _get_item_unique_query(self, index):
         """Need to batch"""
-        raw_data = self.query_data[index]
+        raw_data = self.unique_query_data[index]
         meta = dict(desc_id=raw_data["query_id"], desc=raw_data["query"],
                     vid_name=raw_data["video_name"] if self.load_gt_video else None)
         model_inputs = dict()
@@ -326,6 +328,11 @@ def start_end_collate(batch):
             st, ed = st_ed[0], st_ed[1]
             match_labels[idx][st:(ed + 1)] = 1
         batched_data['match_labels'] = torch.tensor(match_labels, dtype=torch.long)
+        
+    qids = [e["desc_id"] for e in batch_meta]
+    qids = np.array(qids)
+    video_contrastive_mask = (qids[:, None] != qids).astype(int)
+    batched_data["video_contrastive_mask"] =  torch.tensor(video_contrastive_mask)
     return batch_meta, batched_data
 
 

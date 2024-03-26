@@ -1,7 +1,7 @@
-from method_tvr.start_end_dataset import StartEndDataset, StartEndEvalDataset, start_end_collate
-from torch.utils.data import DataLoader
+from method_tvr.start_end_dataset import StartEndDataset, StartEndEvalDataset
 
-def get_train_data_loader(opt, data_path):
+
+def get_train_data(opt, data_path):
     train_dataset = StartEndDataset(
         data_path=data_path,
         desc_bert_path_or_handler=opt.desc_bert_path,
@@ -15,10 +15,7 @@ def get_train_data_loader(opt, data_path):
         data_ratio=opt.data_ratio,
         normalize_vfeat=not opt.no_norm_vfeat,
         normalize_tfeat=not opt.no_norm_tfeat)
-    
-    train_loader = DataLoader(train_dataset, collate_fn=start_end_collate, batch_size=opt.bsz,
-                              num_workers=opt.num_workers, shuffle=True, pin_memory=opt.pin_memory)
-    return train_loader
+    return train_dataset
 
 def get_eval_data(opt, data_path, data_mode):
     dataset = StartEndEvalDataset(

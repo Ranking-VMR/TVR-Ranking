@@ -96,8 +96,6 @@ class SlidingWindowMSRSS(TemporalProposalsBase):
             windows_i[:, 1] = windows_i[:, 0] + self.length * self.scales[i]
             windows_i[windows_i[:, 1] > t_end, 1] = t_end
             windows_.append(windows_i)
-            # print("--------------------------------{}".format(i))
-            # print(windows_i)
         # import sys
         # sys.exit(1)
         windows = np.concatenate(windows_, axis=0)

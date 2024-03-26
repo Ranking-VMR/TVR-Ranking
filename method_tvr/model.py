@@ -88,7 +88,7 @@ class ReLoCLNet(nn.Module):
         """pre-train video retrieval then span prediction"""
         self.config.lw_st_ed = lw_st_ed
 
-    def forward(self, query_feat, query_mask, video_feat, video_mask, sub_feat, sub_mask, st_ed_indices, match_labels, simi):
+    def forward(self, query_feat, query_mask, video_feat, video_mask, sub_feat, sub_mask, st_ed_indices, match_labels, simi, video_contrastive_mask):
         """
         Args:
             query_feat: (N, Lq, Dq)
@@ -119,7 +119,8 @@ class ReLoCLNet(nn.Module):
             mid_sub_q2ctx_scores = self.get_unnormalized_video_level_scores(sub_query, mid_x_sub_feat, sub_mask)
             mid_video_q2ctx_scores, _ = torch.max(mid_video_q2ctx_scores, dim=1)
             mid_sub_q2ctx_scores, _ = torch.max(mid_sub_q2ctx_scores, dim=1)
-            mid_q2ctx_scores = (mid_video_q2ctx_scores + mid_sub_q2ctx_scores) / 2.0
+            # exclude the contrastive loss for the same query
+            mid_q2ctx_scores = (mid_video_q2ctx_scores + mid_sub_q2ctx_scores) / 2.0  * video_contrastive_mask
             loss_vcl = self.nce_criterion(mid_q2ctx_scores)
             loss_vcl = self.config.lw_vcl * loss_vcl
         # moment localization loss

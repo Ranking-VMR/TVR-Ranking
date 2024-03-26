@@ -252,28 +252,14 @@ def eval_by_task_type(moment_predictions, video2idx, ground_truth,
     return metrics, metrics_by_type
 
 
-def eval_retrieval(submission, ground_truth, iou_thds=(0.5, 0.7), verbose=True, match_number=True, use_desc_type=True):
-    video2idx = submission["video2idx"]
-    submitted_task_types = [k for k in TASK_TYPES if k in submission]
-    if verbose:
-        print("Evaluating for task {}".format(submitted_task_types))
-    eval_metrics = OrderedDict()
-    metrics_raw_dict = {}
-    for task_type in submitted_task_types:
-        metrics, metrics_by_type = eval_by_task_type(
-            submission[task_type], video2idx, ground_truth,
-            iou_thds=iou_thds, recall_topks=(1, 10, 100),  # (1, 5, 10, 20, 50, 100),
-            task_type=task_type, max_pred_per_query=100,
-            match_number=match_number, verbose=verbose, use_desc_type=use_desc_type)
-        metrics_raw_dict[task_type] = metrics
-        metrics_raw_dict[task_type+"_by_type"] = metrics_by_type
-
-    for task_type in submitted_task_types:
-        eval_metrics[task_type] = metrics_raw_dict[task_type]
-    if use_desc_type:
-        for task_type in submitted_task_types:
-            eval_metrics[task_type+"_by_type"] = metrics_raw_dict[task_type+"_by_type"]
-    return eval_metrics
+def eval_vcmr_retrieval(pred_data, gt_data, video2idx, iou_thds):
+    
+    metrics = eval_by_task_type(pred_data, video2idx, gt_data,
+        iou_thds=iou_thds, recall_topks=(1, 10, 100),  # (1, 5, 10, 20, 50, 100),
+        task_type="VCMR", max_pred_per_query=100,
+        match_number=True, verbose=False, use_desc_type=False)
+    
+    return metrics
 
 
 def eval_main():

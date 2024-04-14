@@ -96,8 +96,7 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                 
             ###### ------------------- #############
             ### eval during training
-            # print(eval_tasks_at_training)
-            if global_step % eval_step == 0 :# and global_step != 0:
+            if global_step % eval_step == 0 and global_step != 0:
                 model.eval()
                 with torch.no_grad():
                     val_performance, val_predictions = eval_epoch(model, val_data, context_data, logger, opt,  max_after_nms=40, iou_thds=thresholds, topks=topks)

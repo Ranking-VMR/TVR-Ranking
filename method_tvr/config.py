@@ -49,8 +49,6 @@ class BaseOptions(object):
                                  help="number of epochs to early stop, use -1 to disable early stop")
         self.parser.add_argument("--stop_task", type=str, default="VCMR", choices=["VCMR", "SVMR", "VR"],
                                  help="Use metric associated with stop_task for early stop")
-        self.parser.add_argument("--eval_tasks_at_training", type=str, nargs="+", default=["VCMR", "SVMR", "VR"],
-                                 choices=["VCMR", "SVMR", "VR"], help="evaluate and report numbers for tasks.")
         self.parser.add_argument("--bsz", type=int, default=128, help="mini-batch size")
         self.parser.add_argument("--eval_query_bsz", type=int, default=50, help="minibatch size at inference for query")
         self.parser.add_argument("--eval_context_bsz", type=int, default=200,
@@ -175,7 +173,6 @@ class BaseOptions(object):
         if opt.hard_negative_start_epoch != -1:
             if opt.hard_pool_size > opt.bsz:
                 print("[WARNING] hard_pool_size is larger than bsz")
-        assert opt.stop_task in opt.eval_tasks_at_training
         opt.ckpt_filepath = os.path.join(opt.results_dir, self.ckpt_filename)
         opt.train_log_filepath = os.path.join(opt.results_dir, self.train_log_filename)
         opt.eval_log_filepath = os.path.join(opt.results_dir, self.eval_log_filename)

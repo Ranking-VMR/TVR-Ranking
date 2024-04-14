@@ -18,7 +18,6 @@ from method_tvr.start_end_dataset import start_end_collate, context_collate, pre
 from utils.basic_utils import save_json, load_json
 from utils.temporal_nms import temporal_non_maximum_suppression
 from utils.tensor_utils import find_max_triples_from_upper_triangle_product
-from standalone_eval.eval import eval_vcmr_retrieval
 from method_tvr.init_dataset import get_train_data, get_eval_data
 
 logger = logging.getLogger(__name__)
@@ -117,7 +116,25 @@ def get_prediction_top_n(list_dict_predictions, top_n):
 #     return top_n_submission
 
 
-def compute_context_info(model, context_data, opt):
+def cat_tensor(tensor_list):
+    if len(tensor_list) == 0:
+        return None
+    else:
+        seq_l = [e.shape[1] for e in tensor_list]
+        b_sizes = [e.shape[0] for e in tensor_list]
+        b_sizes_cumsum = np.cumsum([0] + b_sizes)
+        if len(tensor_list[0].shape) == 3:
+            hsz = tensor_list[0].shape[2]
+            res_tensor = tensor_list[0].new_zeros(sum(b_sizes), max(seq_l), hsz)
+        elif len(tensor_list[0].shape) == 2:
+            res_tensor = tensor_list[0].new_zeros(sum(b_sizes), max(seq_l))
+        else:
+            raise ValueError("Only support 2/3 dimensional tensors")
+        for i, e in enumerate(tensor_list):
+            res_tensor[b_sizes_cumsum[i]:b_sizes_cumsum[i+1], :seq_l[i]] = e
+        return res_tensor
+    
+def compute_context_info_ReLoCLNet(model, context_data, opt):
     """Use val set to do evaluation, remember to run with torch.no_grad().
     estimated 2200 (videos) * 100 (frm) * 500 (hsz) * 4 (B) * 2 (video/sub) * 2 (layers) / (1024 ** 2) = 1.76 GB
     max_n_videos: only consider max_n_videos videos for each query to return st_ed scores.
@@ -142,31 +159,47 @@ def compute_context_info(model, context_data, opt):
             sub_feat.append(_sub_feat)
             sub_mask.append(model_inputs["sub_mask"])
 
-    def cat_tensor(tensor_list):
-        if len(tensor_list) == 0:
-            return None
-        else:
-            seq_l = [e.shape[1] for e in tensor_list]
-            b_sizes = [e.shape[0] for e in tensor_list]
-            b_sizes_cumsum = np.cumsum([0] + b_sizes)
-            if len(tensor_list[0].shape) == 3:
-                hsz = tensor_list[0].shape[2]
-                res_tensor = tensor_list[0].new_zeros(sum(b_sizes), max(seq_l), hsz)
-            elif len(tensor_list[0].shape) == 2:
-                res_tensor = tensor_list[0].new_zeros(sum(b_sizes), max(seq_l))
-            else:
-                raise ValueError("Only support 2/3 dimensional tensors")
-            for i, e in enumerate(tensor_list):
-                res_tensor[b_sizes_cumsum[i]:b_sizes_cumsum[i+1], :seq_l[i]] = e
-            return res_tensor
-
-    return dict(
-        video_metas=metas,  # list(dict) (N_videos)
+    return metas, dict(
         video_feat=cat_tensor(video_feat),  # (N_videos, L, hsz),
         video_mask=cat_tensor(video_mask),  # (N_videos, L)
         sub_feat=cat_tensor(sub_feat),
         sub_mask=cat_tensor(sub_mask))
 
+def compute_context_info_XML(model, context_data, opt):
+    """Use val set to do evaluation, remember to run with torch.no_grad().
+    estimated 2200 (videos) * 100 (frm) * 500 (hsz) * 4 (B) * 2 (video/sub) * 2 (layers) / (1024 ** 2) = 1.76 GB
+    max_n_videos: only consider max_n_videos videos for each query to return st_ed scores.
+    """
+    model.eval()
+    # eval_dataset.set_data_mode("context")
+    context_dataloader = DataLoader(context_data, collate_fn=context_collate, batch_size=opt.eval_context_bsz,
+                                    num_workers=opt.num_workers, shuffle=False, pin_memory=opt.pin_memory)
+    metas = []  # list(dicts)
+    video_feat1, video_feat2, video_mask = [], [], []
+    sub_feat1, sub_feat2, sub_mask = [], [], []
+    for idx, batch in tqdm(enumerate(context_dataloader), desc="Computing query2video scores",
+                           total=len(context_dataloader)):
+        metas.extend(batch[0])
+        model_inputs = prepare_batch_inputs(batch[1], device=opt.device, non_blocking=opt.pin_memory)
+        _video_feat1, _video_feat2, _sub_feat1, _sub_feat2 = model.encode_context(model_inputs["video_feat"], model_inputs["video_mask"],
+                                                      model_inputs["sub_feat"], model_inputs["sub_mask"])
+        if "video" in opt.ctx_mode:
+            video_feat1.append(_video_feat1)
+            video_feat2.append(_video_feat2)
+            video_mask.append(model_inputs["video_mask"])
+        if "sub" in opt.ctx_mode:
+            sub_feat1.append(_sub_feat1)
+            sub_feat2.append(_sub_feat2)
+            sub_mask.append(model_inputs["sub_mask"])
+            
+    return metas, dict(
+        video_feat1=cat_tensor(video_feat1),  # (N_videos, L, hsz),
+        video_feat2=cat_tensor(video_feat2),
+        video_mask=cat_tensor(video_mask),  # (N_videos, L)
+        sub_feat1=cat_tensor(sub_feat1),
+        sub_feat2=cat_tensor(sub_feat2),
+        sub_mask=cat_tensor(sub_mask),
+    )
 
 def index_if_not_none(input_tensor, indices):
     if input_tensor is None:
@@ -174,57 +207,6 @@ def index_if_not_none(input_tensor, indices):
     else:
         return input_tensor[indices]
 
-
-# def compute_query2ctx_info_svmr_only(model, eval_dataset, opt, ctx_info, max_before_nms=1000):
-#     """Use val set to do evaluation, remember to run with torch.no_grad().
-#     estimated size 20,000 (query) * 500 (hsz) * 4 / (1024**2) = 38.15 MB
-#     max_n_videos: int, use max_n_videos videos for computing VCMR results
-#     """
-#     model.eval()
-#     eval_dataset.set_data_mode("query")
-#     eval_dataset.load_gt_vid_name_for_query(True)
-#     query_eval_loader = DataLoader(eval_dataset, collate_fn=start_end_collate, batch_size=opt.eval_query_bsz,
-#                                    num_workers=opt.num_workers, shuffle=False, pin_memory=opt.pin_memory)
-#     video2idx = eval_dataset.video2idx
-#     video_metas = ctx_info["video_metas"]
-#     n_total_query = len(eval_dataset)
-#     bsz = opt.eval_query_bsz
-#     ctx_len = eval_dataset.max_ctx_len  # all pad to this length
-
-#     svmr_video2meta_idx = {e["vid_name"]: idx for idx, e in enumerate(video_metas)}
-#     svmr_gt_st_probs = np.zeros((n_total_query, ctx_len), dtype=np.float32)
-#     svmr_gt_ed_probs = np.zeros((n_total_query, ctx_len), dtype=np.float32)
-
-#     query_metas = []
-#     for idx, batch in tqdm(
-#             enumerate(query_eval_loader), desc="Computing q embedding", total=len(query_eval_loader)):
-#         _query_metas = batch[0]
-#         query_metas.extend(batch[0])
-#         model_inputs = prepare_batch_inputs(batch[1], device=opt.device, non_blocking=opt.pin_memory)
-#         # query_context_scores (_N_q, N_videos), st_prob, ed_prob (_N_q, L)
-#         query2video_meta_indices = torch.tensor([svmr_video2meta_idx[e["vid_name"]] for e in _query_metas],
-#                                                 dtype=torch.long, requires_grad=False)
-#         _query_context_scores, _st_probs, _ed_probs = \
-#             model.get_pred_from_raw_query(model_inputs["query_feat"], model_inputs["query_mask"],
-#                                           index_if_not_none(ctx_info["video_feat"], query2video_meta_indices),
-#                                           index_if_not_none(ctx_info["video_mask"], query2video_meta_indices),
-#                                           index_if_not_none(ctx_info["sub_feat"], query2video_meta_indices),
-#                                           index_if_not_none(ctx_info["sub_mask"], query2video_meta_indices),
-#                                           cross=False)
-#         _query_context_scores = _query_context_scores + 1  # move cosine similarity to [0, 2]
-
-#         # normalize to get true probabilities!!!
-#         # the probabilities here are already (pad) masked, so only need to do softmax
-#         _st_probs = F.softmax(_st_probs, dim=-1)  # (_N_q, L)
-#         _ed_probs = F.softmax(_ed_probs, dim=-1)
-
-#         svmr_gt_st_probs[idx * bsz:(idx + 1) * bsz, :_st_probs.shape[1]] = _st_probs.cpu().numpy()
-#         svmr_gt_ed_probs[idx * bsz:(idx + 1) * bsz, :_ed_probs.shape[1]] = _ed_probs.cpu().numpy()
-
-#     svmr_res = get_svmr_res_from_st_ed_probs(svmr_gt_st_probs, svmr_gt_ed_probs, query_metas, video2idx,
-#                                              clip_length=opt.clip_length, min_pred_l=opt.min_pred_l,
-#                                              max_pred_l=opt.max_pred_l, max_before_nms=max_before_nms)
-#     return dict(SVMR=svmr_res)
 
 
 def generate_min_max_length_mask(array_shape, min_l, max_l):
@@ -293,13 +275,13 @@ def load_external_vr_res2(external_vr_res_path, top_n_vr_videos=5):
     return query2video
 
 
-def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=1000, max_n_videos=100 ):
+def compute_query2ctx_info(model, eval_dataset, opt, video_metas, ctx_info, max_before_nms=1000, max_n_videos=100 ):
     """Use val set to do evaluation, remember to run with torch.no_grad().
     estimated size 20,000 (query) * 500 (hsz) * 4 / (1024**2) = 38.15 MB
     max_n_videos: int, use max_n_videos videos for computing VCMR/VR results
     """
     video2idx = eval_dataset.video2idx
-    video_metas = ctx_info["video_metas"]
+    # video_metas = ctx_info["video_metas"]
     video_idx2meta_idx = None
     external_query2video = None
     model.eval()
@@ -324,8 +306,7 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
         model_inputs = prepare_batch_inputs(batch[1], device=opt.device, non_blocking=opt.pin_memory)
         # query_context_scores (_N_q, N_videos), st_prob, ed_prob (_N_q, N_videos, L)
         _query_context_scores, _st_probs, _ed_probs = model.get_pred_from_raw_query(
-            model_inputs["query_feat"], model_inputs["query_mask"], ctx_info["video_feat"], ctx_info["video_mask"],
-            ctx_info["sub_feat"], ctx_info["sub_mask"], cross=True)
+            model_inputs["query_feat"], model_inputs["query_mask"], **ctx_info, cross=True, )
         # _query_context_scores = _query_context_scores + 1  # move cosine similarity to [0, 2]
         # To give more importance to top scores, the higher opt.alpha is the more importance will be given
         _query_context_scores = torch.exp(opt.q2c_alpha * _query_context_scores)
@@ -396,9 +377,9 @@ def compute_query2ctx_info(model, eval_dataset, opt, ctx_info, max_before_nms=10
 
 def get_eval_res(model,  eval_dataset, context_data, opt):
     """compute and save query and video proposal embeddings"""
-    context_info = compute_context_info(model, context_data, opt)
-    eval_res = compute_query2ctx_info(model, eval_dataset, opt, context_info, max_before_nms=opt.max_before_nms,
-                                       max_n_videos=opt.max_vcmr_video)
+    
+    video_metas, context_info = eval("compute_context_info_"+opt.model_name)(model, context_data, opt)
+    eval_res = compute_query2ctx_info(model, eval_dataset, opt, video_metas, context_info, max_before_nms=opt.max_before_nms, max_n_videos=opt.max_vcmr_video)
     return eval_res
 
 
@@ -419,36 +400,6 @@ def eval_epoch(model, eval_dataset, context_data, logger, opt, max_after_nms, io
     pred_data = get_prediction_top_n(eval_res, top_n=max_after_nms)
     gt_data = eval_dataset.all_query_data
     average_ndcg = recall_iou_ndcg(pred_data, gt_data, video2idx, iou_thds, topks)
-    # average_recall = eval_vcmr_retrieval(pred_data, gt_data, video2idx, iou_thds)
-    # metrics = eval_ranked_retrieval(eval_submission, eval_dataset.query_data, iou_thds=IOU_THDS,
-    #                         match_number=not opt.debug, verbose=opt.debug, use_desc_type=opt.dset_name == "tvr")
-
-    # save_metrics_path = submission_path.replace(".json", "_metrics.json")
-    # save_json(metrics, save_metrics_path, save_pretty=True, sort_keys=False)
-    # latest_file_paths = [submission_path, save_metrics_path]
-
-    # if opt.nms_thd != -1:
-    #     logger.info("Performing nms with nms_thd {}".format(opt.nms_thd))
-    #     eval_submission_after_nms = dict(video2idx=eval_submission_raw["video2idx"])
-    #     for k, nms_func in POST_PROCESSING_MMS_FUNC.items():
-    #         if k in eval_submission_raw:
-    #             eval_submission_after_nms[k] = nms_func(eval_submission_raw[k], nms_thd=opt.nms_thd,
-    #                                                     max_before_nms=opt.max_before_nms, max_after_nms=max_after_nms)
-    #     logger.info("Saving/Evaluating nms results")
-    #     submission_nms_path = submission_path.replace(".json", "_nms_thd_{}.json".format(opt.nms_thd))
-    #     save_json(eval_submission_after_nms, submission_nms_path)
-    #     if opt.eval_split_name == "val":
-            
-    #         metrics_nms = eval_retrieval(eval_submission_after_nms, eval_dataset.query_data, iou_thds=IOU_THDS,
-    #                                      match_number=not opt.debug, verbose=opt.debug)
-    #         save_metrics_nms_path = submission_nms_path.replace(".json", "_metrics.json")
-    #         save_json(metrics_nms, save_metrics_nms_path, save_pretty=True, sort_keys=False)
-    #         latest_file_paths += [submission_nms_path, save_metrics_nms_path]
-    #     else:
-    #         metrics_nms = None
-    #         latest_file_paths = [submission_nms_path, ]
-    # else:
-    #     metrics_nms = None
     return average_ndcg, pred_data
 
 

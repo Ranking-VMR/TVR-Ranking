@@ -22,9 +22,8 @@ from method_tvr.inference import eval_epoch, start_inference
 from method_tvr.optimization import BertAdam
 from utils.basic_utils import AverageMeter, get_logger
 from utils.model_utils import count_parameters
-from method_tvr.models.ReLoclNet import set_ReLoCLNet_Config
-from method_tvr.models.XML import set_XML_Config, XML
-from utils.basic_utils import save_json
+from method_tvr.models.XML import XML
+from utils.basic_utils import save_json, load_yaml
 from torch.utils.data import DataLoader
 
 def set_seed(seed, use_cuda=True):
@@ -53,7 +52,6 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                          t_total=num_train_optimization_steps, schedule="warmup_linear")
     eval_step = len(train_loader) // opt.eval_num_per_epoch
     
-    
     ########### ---------------------- ##################
     # start train
     best_val_ndcg = 0
@@ -62,9 +60,7 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
     for epoch_i in range(0, opt.n_epoch):
         print(f"TRAIN EPOCH: {epoch_i}|{opt.n_epoch}")
         global_step = (epoch_i + 1) * len(train_loader)
-        
         model.train()
-    
         if opt.hard_negative_start_epoch != -1 and epoch_i >= opt.hard_negative_start_epoch:
             model.set_hard_negative(True, opt.hard_pool_size)
         if opt.train_span_start_epoch != -1 and epoch_i >= opt.train_span_start_epoch:
@@ -101,7 +97,7 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
             ###### ------------------- #############
             ### eval during training
             # print(eval_tasks_at_training)
-            if global_step % eval_step == 0 and global_step != 0:
+            if global_step % eval_step == 0 :# and global_step != 0:
                 model.eval()
                 with torch.no_grad():
                     val_performance, val_predictions = eval_epoch(model, val_data, context_data, logger, opt,  max_after_nms=40, iou_thds=thresholds, topks=topks)
@@ -137,7 +133,6 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                     logger.info("save checkpoint: {}".format(opt.ckpt_filepath))
                     print("~"*40)
 
-                    
                 logger.info("")
                         
                     # metrics = val_metrics_no_nms
@@ -186,15 +181,10 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
 def start_training():
     opt = BaseOptions().parse()
     set_seed(opt.seed)
-
     logger = get_logger(opt.results_dir, opt.model_name +"_"+ opt.exp_id)
     writer = SummaryWriter(opt.tensorboard_log_dir)
 
-    opt.train_log_txt_formatter = "{time_str} [Epoch] {epoch:03d} [Loss] {loss_str}\n"
-    opt.eval_log_txt_formatter = "{time_str} [Epoch] {epoch:03d} [Metrics] {eval_metrics_str}\n"
-
     train_dataset = get_train_data(opt, opt.train_path)
-    
     train_data_loader = DataLoader(train_dataset, collate_fn=start_end_collate, batch_size=opt.bsz,
                             num_workers=opt.num_workers, shuffle=True, pin_memory=opt.pin_memory)
     
@@ -203,7 +193,7 @@ def start_training():
     test_data = get_eval_data(opt, opt.test_path, data_mode="query")
     
     model_name = eval(opt.model_name)
-    model_config = eval("set_"+opt.model_name+"_Config")(opt)
+    model_config = EDict(load_yaml(opt.model_config_path))
     logger.info("{} config {}".format(model_name, model_config))
     model = model_name(model_config)
     count_parameters(model)

@@ -3,7 +3,7 @@ import json
 import zipfile
 import numpy as np
 import pickle
-
+import yaml
 
 def uniform_feature_sampling(features, max_len):
     num_clips = features.shape[0]
@@ -54,6 +54,18 @@ def time_to_index(start_time, end_time, num_units, duration):
     start_index = np.argmax(overlaps) // num_units
     end_index = np.argmax(overlaps) % num_units
     return start_index, end_index
+
+
+def load_yaml(filename):
+    try:
+        with open(filename, 'r') as file:
+            return yaml.safe_load(file)
+    except yaml.YAMLError as exc:
+        print(f"Error parsing YAML file: {exc}")
+        return None
+    except FileNotFoundError:
+        print(f"File not found: {filename}")
+        return None
 
 
 def load_pickle(filename):

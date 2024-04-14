@@ -24,7 +24,7 @@ def calculate_ndcg(pred_scores, true_scores):
 
 
 
-def recall_iou_ndcg(gt_data, pred_data, video2idx, TS, KS):
+def recall_iou_ndcg(gt_data, pred_data, video2idx, idx2video, video2duration, TS, KS):
     performance = defaultdict(lambda: defaultdict(list))
     performance_avg = defaultdict(lambda: defaultdict(float))
     
@@ -34,13 +34,15 @@ def recall_iou_ndcg(gt_data, pred_data, video2idx, TS, KS):
     gt_data_tmp["start_time"] = gt_data_tmp["timestamp"].apply(lambda x: x[0])
     gt_data_tmp["end_time"] = gt_data_tmp["timestamp"].apply(lambda x: x[1])
     gt_data_tmp["vid"] = gt_data_tmp["video_name"].map(video2idx) 
-    gt_data = gt_data_tmp[["query_id", "query", "vid", "start_time", "end_time", "relevance"]]
+    gt_data = gt_data_tmp[["query_id", "query", "video_name", "vid", "start_time", "end_time", "relevance", "duration"]]
     
     for i in tqdm(range(len(pred_data))):
         one_query_preds = pred_data[i]
         qid = one_query_preds["query_id"]
         one_query_preds = one_query_preds["predictions"]
         one_query_preds_df = pd.DataFrame(one_query_preds, columns=["vid", "start_time", "end_time", "model_scores"])
+        one_query_preds_df["video_name"] = one_query_preds_df["vid"].map(idx2video) 
+        one_query_preds_df["duration"] = one_query_preds_df["video_name"].map(video2duration) 
 
         one_query_gts = gt_data[gt_data["query_id"]==qid].sort_values(by="relevance", ascending=False).reset_index(drop=True)
 
@@ -74,27 +76,49 @@ def recall_iou_ndcg(gt_data, pred_data, video2idx, TS, KS):
                 
                 ndcg_score = calculate_ndcg(pred_scores, true_scores)
                 performance[K][T].append(ndcg_score)
-    
+                if  ndcg_score  > 0.7:
+                    print(qid, "NDCG", ndcg_score)
+                    print("gt")
+                    print(one_query_gts["relevance"].tolist()[:K])
+                    print(one_query_gts["video_name"].tolist()[:K])
+                    duration_series = one_query_gts.loc[:, "duration"]
+                    normalized_times = one_query_gts.loc[:, ["start_time", "end_time"]].div(duration_series, axis=0)
+                    print(normalized_times.head(K).to_dict("split")["data"])
+
+                    print("prediction")
+                    print(pred_scores)
+                    print(one_query_preds_df["video_name"].tolist()[:K])
+                    duration_series = one_query_preds_df.loc[:, "duration"]
+                    normalized_times = one_query_preds_df.loc[:, ["start_time", "end_time"]].div(duration_series, axis=0)
+                    print(normalized_times.head(K).to_dict("split")["data"])
+
+                    print()
+                    input()
     for K, vs in performance.items():
         for T, v in vs.items():
             performance_avg[K][T] = np.mean(v)
     return performance_avg
 
 
-KS = [10, 20, 40]
-TS = [0.3, 0.5, 0.7]
-# val_gt_path = "data/TVR_Ranking/val.jsonl"
-# val_result_path = "./results/tmp/best_val_predictions.json"
-val_gt_path = "data/TVR_Ranking/test.jsonl"
-val_result_path = "./results/tmp/best_test_predictions.json"
+# KS = [10, 20, 40]
+# TS = [0.3, 0.5, 0.7]
 
-result_data= load_json(val_result_path)
-video2idx = result_data["video2idx"]
-pred_data = result_data["VCMR"]
-gt_data = load_jsonl(val_gt_path)
+KS = [10]
+TS = [0.3]
 
-average_ndcg = recall_iou_ndcg(gt_data, pred_data, video2idx, TS, KS)
-print(val_result_path)
+video2idx = load_json("./data/TVR_Ranking/video_corpus.json")
+video2duration = {k: v[0] for k, v in video2idx.items()}
+video2idx = {k: v[1] for k, v in video2idx.items()}
+idx2video = {v: k for k, v in video2idx.items()}
+
+
+gt_path = "data/TVR_Ranking/test.jsonl"
+prediction_path = "./results/tvr_ranking/ReLoCLNet_top_40_20240326_163257/best_test_predictions.json"
+pred_data= load_json(prediction_path)
+gt_data = load_jsonl(gt_path)
+
+average_ndcg = recall_iou_ndcg(gt_data, pred_data, video2idx, idx2video, video2duration, TS, KS)
+print(prediction_path)
 for K, vs in average_ndcg.items():
     for T, v in vs.items():
         print(f"VAL Top {K}, IoU={T}, NDCG: {v:.6f}")

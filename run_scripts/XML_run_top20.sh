@@ -1,7 +1,7 @@
 # CUDA_VISIBLE_DEVICES=0 \
 python method_tvr/train.py \
-    --model_name ReLoCLNet \
-    --model_config_path ./configs/ReLoCLNet.yaml \
+    --model_name XML \
+    --model_config_path ./configs/XML.yaml \
     --dset_name TVR-Ranking \
     --eval_split_name val \
     --nms_thd -1 \
@@ -24,5 +24,5 @@ python method_tvr/train.py \
     --n_epoch 50 \
     --exp_id top_20
 
-    # qsub -I -l select=1:ngpus=1 -P gs_slab -q slab_gpu8
-    # cd 11_TVR-Ranking/ReLoCLNet/; conda activate py11; sh run_top20.sh 
+    # qsub -I -l select=1:ngpus=1 -P gs_slab -q gpu8
+    # cd 11_TVR-Ranking/ReLoCLNet/; conda activate py11; sh XML_run_top20.sh 

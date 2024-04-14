@@ -126,6 +126,8 @@ class BaseOptions(object):
                                       "charades_sta, 0.5 for anet_cap")
         self.parser.add_argument("--eval_num_per_epoch", type=float, default=1.0, help="eval times during each epoch")
         self.parser.add_argument("--model_name", type=str)
+        self.parser.add_argument("--model_config_path", type=str)
+
 
     def display_save(self, opt):
         args = vars(opt)

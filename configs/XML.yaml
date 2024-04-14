@@ -1,0 +1,30 @@
+merge_two_stream: True  # merge video and subtitles
+cross_att: True  # use cross-attention when encoding video and subtitles
+span_predictor_type: "conv"  # span_predictor_type
+encoder_type: "transformer"  # gru, lstm, transformer
+add_pe_rnn: False  # add pe for RNNs
+pe_type: "cosine"  #
+visual_input_size: 1026
+sub_input_size: 770  # for both desc and subtitles
+query_input_size: 768  # for both desc and subtitles
+hidden_size: 256  #
+stack_conv_predictor_conv_kernel_sizes: -1  #
+conv_kernel_size: 5
+conv_stride: 1
+max_ctx_l: 128
+max_desc_l: 30
+input_drop: 0.1
+cross_att_drop: 0.1
+drop: 0.1
+n_heads: 4  # self-att heads
+initializer_range: 0.02  # for linear layer
+ctx_mode: "video_sub"  # video, sub or video_sub
+margin: 0.1  # margin for ranking loss
+ranking_loss_type: "hinge"  # loss type, 'hinge' or 'lse'
+lw_neg_q: 1  # loss weight for neg. query and pos. context
+lw_neg_ctx: 1  # loss weight for pos. query and neg. context
+lw_st_ed: 0  # will be assigned dynamically at training time
+use_hard_negative: False  # reset at each epoch
+hard_pool_size: 20
+use_self_attention: True  # whether to use self attention
+no_modular: False

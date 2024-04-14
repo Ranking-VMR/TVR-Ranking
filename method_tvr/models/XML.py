@@ -8,42 +8,6 @@ from method_tvr.models.XML_lib  import BertAttention, PositionEncoding, LinearLa
 from utils.model_utils import RNNEncoder
 
 
-from easydict import EasyDict as EDict
-def set_XML_Config(opt):
-    model_config = EDict(
-        merge_two_stream=False,  # merge video and subtitles
-        cross_att=False,  # use cross-attention when encoding video and subtitles
-        span_predictor_type='conv',  # span_predictor_type
-        encoder_type='transformer',  # gru, lstm, transformer
-        add_pe_rnn=False,  # add pe for RNNs
-        pe_type=False,  #
-        visual_input_size=opt.vid_feat_size,
-        sub_input_size=opt.sub_feat_size,  # for both desc and subtitles
-        query_input_size=opt.q_feat_size,  # for both desc and subtitles
-        hidden_size=opt.hidden_size,  #
-        stack_conv_predictor_conv_kernel_sizes=-1,  #
-        conv_kernel_size=opt.conv_kernel_size,
-        conv_stride=opt.conv_stride,
-        max_ctx_l=128,
-        max_desc_l=30,
-        input_drop=0.1,
-        cross_att_drop=0.1,
-        drop=opt.drop,
-        n_heads=4,  # self-att heads
-        initializer_range=0.02,  # for linear layer
-        ctx_mode=opt.ctx_mode,  # video, sub or video_sub
-        margin=opt.margin,  # margin for ranking loss
-        ranking_loss_type=opt.ranking_loss_type,  # loss type, 'hinge' or 'lse'
-        lw_neg_q=opt.lw_neg_q,  # loss weight for neg. query and pos. context
-        lw_neg_ctx=opt.lw_neg_ctx,  # loss weight for pos. query and neg. context
-        lw_st_ed=0,  # will be assigned dynamically at training time
-        use_hard_negative=False,  # reset at each epoch
-        hard_pool_size=opt.hard_pool_size,
-        use_self_attention=True,  # whether to use self attention
-        no_modular=False
-    )
-    return model_config
-
 class XML(nn.Module):
     def __init__(self, config):
         super(XML, self).__init__()
@@ -205,7 +169,7 @@ class XML(nn.Module):
         self.config.lw_st_ed = lw_st_ed
 
     def forward(self, query_feat, query_mask, video_feat, video_mask, sub_feat, sub_mask, match_labels,
-                st_ed_indices, simi):
+                st_ed_indices, simi, video_contrastive_mask):
         """
         Args:
             query_feat: (N, Lq, Dq)

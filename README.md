@@ -41,13 +41,9 @@ The detailed introduction and raw annotations is available at [TVR_Ranking Intro
 
 ### 3. Download features
 
-For the features of TVR dataset, please download [tvr_feature_release.tar.gz](
-https://drive.google.com/file/d/1j4mVkXjKCgafW3ReNjZ2Rk6CKx0Fk_n5/view?usp=sharing) (link is copied from 
-[TVRetrieval](https://github.com/jayleicn/TVRetrieval#prerequisites)) and extract it.
-The [gdown](https://github.com/wkentaro/gdown.git) is an effective tool for downloading files from Google Drive.
+For the features of the TVR dataset, you can request them from [TVR](https://tvr.cs.unc.edu/) or download them from [TVR features on Hugging Face](https://huggingface.co/datasets/k-nick/NLVL).
 
 ```shell
-gdown 1j4mVkXjKCgafW3ReNjZ2Rk6CKx0Fk_n5
 tar -xf tvr_feature_release.tar.gz -C data
 ```
 

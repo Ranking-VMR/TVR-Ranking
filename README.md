@@ -1,91 +1,83 @@
-# Video Corpus Moment Retrieval with Contrastive Learning
+# Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries
 
-PyTorch implementation for the paper "Video Corpus Moment Retrieval with Contrastive Learning" (**SIGIR 2021**, 
-long paper): [SIGIR version](https://dl.acm.org/doi/10.1145/3404835.3462874), [ArXiv version](
-https://arxiv.org/pdf/2105.06247.pdf).
+The benchmark and dataset for the paper "Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries"
 
-![model_overview](./figures/model.png)
 
-> The codes are modified from [TVRetrieval](https://github.com/jayleicn/TVRetrieval).
+![vmr_ranking_overview](./figures/task_introduction.png)
 
-## Prerequisites
-- python 3.x with pytorch (`1.7.0`), torchvision, transformers, tensorboard, tqdm, h5py, easydict
-- cuda, cudnn
+> The codes are modified from [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet).
 
-If you have [Anaconda](https://www.anaconda.com/distribution/) installed, the conda environment of ReLoCLNet can be 
-built as follows (take python 3.7 as an example):
-```shell
-conda create --name reloclnet python=3.7
-conda activate reloclnet
-conda install -c anaconda cudatoolkit cudnn  # ignore this if you already have cuda installed
-conda install pytorch==1.7.0 torchvision==0.8.0 torchaudio==0.7.0 cudatoolkit=11.0 -c pytorch
-conda install -c anaconda h5py=2.9.0
-conda install -c conda-forge transformers tensorboard tqdm easydict
-```
-> The conda environment of [TVRetrieval](https://github.com/jayleicn/TVRetrieval) also works.
 
 
 ## Getting started
-1. Clone this repository
-```shell
-$ git clone git@github.com:IsaacChanghau/ReLoCLNet.git
-$ cd ReLoCLNet
-```
+### 1. Install the requisites
 
-2. Download features
+The Python packages we used were listed as follows.
+Commonly, the most recent versions work well.
+
+
+```shell
+conda create --name tvr_ranking python=3.11
+conda activate tvr_ranking
+pip install pytorch # 2.2.1+cu121
+pip install tensorboard 
+pip install h5py pandas tqdm easydict pyyaml
+```
+The conda environment of [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet) also works.
+
+### 2. Download full dataset
+For the full dataset, please go down from [TVR-Ranking](
+https://drive.google.com/drive/folders/1QuE3Ah1VR_Sudjbl_5VFC1J-aT9Dh_WF?usp=drive_link) and organized as follows
+```
+TVR_Ranking/
+  -val.jsonl                  
+  -test.jsonl                 
+  -train_top01.jsonl
+  -train_top20.jsonl
+  -train_top40.jsonl
+  -video_name_duration_id.json
+```
+The detailed introduction and raw annotations is available at [TVR_Ranking Introduction](data/TVR_Ranking/readme.md).
+
+### 3. Download features
 
 For the features of TVR dataset, please download [tvr_feature_release.tar.gz](
 https://drive.google.com/file/d/1j4mVkXjKCgafW3ReNjZ2Rk6CKx0Fk_n5/view?usp=sharing) (link is copied from 
-[TVRetrieval#prerequisites](https://github.com/jayleicn/TVRetrieval#prerequisites)) and extract it to the `data` 
-directory:
-```shell
-$ tar -xf path/to/tvr_feature_release.tar.gz -C data
-```
-This [link](https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99) may be useful for you to
-directly download Google Drive files using `wget`.  Please refer [TVRetrieval#prerequisites](
-https://github.com/jayleicn/TVRetrieval#prerequisites) for more details about how the features are extracted if you are 
-interested.
+[TVRetrieval](https://github.com/jayleicn/TVRetrieval#prerequisites)) and extract it.
+The [gdown](https://github.com/wkentaro/gdown.git) is an effective tool for downloading files from Google Drive.
 
-3. Add project root to `PYTHONPATH` (**Note that you need to do this each time you start a new session.**)
 ```shell
-$ source setup.sh
+gdown 1j4mVkXjKCgafW3ReNjZ2Rk6CKx0Fk_n5
+tar -xf tvr_feature_release.tar.gz -C data
 ```
 
-## Training and Inference
-
-**TVR dataset**
+### 4. Quick Training
 ```shell
-# train, refer `method_tvr/scripts/train.sh` and `method_tvr/config.py` more details about hyper-parameters
-$ bash method_tvr/scripts/train.sh tvr video_sub_tef resnet_i3d --exp_id reloclnet
-# inference
-# the model directory placed in method_tvr/results/tvr-video_sub_tef-reloclnet-*
-# change the MODEL_DIR_NAME as tvr-video_sub_tef-reloclnet-*
-# SPLIT_NAME: [val | test]
-$ bash method_tvr/scripts/inference.sh MODEL_DIR_NAME SPLIT_NAME
+# modify the data path first 
+sh run_top01.sh
 ```
 
-For more details about evaluation and submission, please refer [TVRetrieval#training-and-inference](
-https://github.com/jayleicn/TVRetrieval#training-and-inference).
+## Baseline
+The baseline performance of  $NDGC@20$ was shown as follows.
+Top $N$ moments were comprised of a pseudo training set by the query-caption similarity.
+| Model    | $N$  | IoU = 0.3, val | IoU = 0.3, test | IoU = 0.5, val | IoU = 0.5, test | IoU = 0.7, val | IoU = 0.7, test |
+|----------|----|--------------------------|---------------------------|--------------------------|---------------------------|--------------------------|---------------------------|
+| **XML**      | 1  | 0.1008                   | 0.1006                    | 0.0751                   | 0.0738                    | 0.0283                   | 0.0316                    |
+|          | 20 | 0.1663                   | 0.1678                    | 0.1273                   | 0.1273                    | 0.0510                   | 0.0556                    |
+|          | 40 | 0.1808                   | 0.1784                    | 0.1388                   | 0.1367                    | 0.0567                   | 0.0589                    |
+| **CONQUER**  | 1  | 0.1143                   | 0.1029                    | 0.0956                   | 0.0811                    | 0.0633                   | 0.0539                    |
+|          | 20 | 0.2014                   | 0.1946                    | 0.1817                   | 0.1777                    | 0.1363                   | 0.1313                    |
+|          | 40 | 0.2068                   | 0.1919                    | 0.1875                   | 0.1768                    | 0.1428                   | 0.1291                    |
+| **ReLoCLNet** | 1  | 0.1234                   | 0.1236                    | 0.1110                   | 0.1100                    | 0.0712                   | 0.0770                    |
+|          | 20 | 0.2615                   | 0.2545                    | 0.2424                   | 0.2373                    | 0.1752                   | 0.1762                    |
+|          | 40 | 0.2715                   | 0.2700                    | 0.2552                   | 0.2541                    | 0.1850                   | 0.1913                    |
+
+
+The checkpoint can all be accessed from [CheckPoints](https://drive.google.com/drive/folders/1hXJn-5ORA8T1Iyx6K2BK7KnUOpCQD9Na?usp=drive_link).
+
 
 ## Citation
 If you feel this project helpful to your research, please cite our work.
 ```
-@inproceedings{zhang2021video,
-	author = {Zhang, Hao and Sun, Aixin and Jing, Wei and Nan, Guoshun and Zhen, Liangli and Zhou, Joey Tianyi and Goh, Rick Siow Mong},
-	title = {Video Corpus Moment Retrieval with Contrastive Learning},
-	year = {2021},
-	isbn = {9781450380379},
-	publisher = {Association for Computing Machinery},
-	address = {New York, NY, USA},
-	url = {https://doi.org/10.1145/3404835.3462874},
-	doi = {10.1145/3404835.3462874},
-	booktitle = {Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval},
-	pages = {685–695},
-	numpages = {11},
-	location = {Virtual Event, Canada},
-	series = {SIGIR '21}
-}
-```
 
-## TODO
-- Upload codes for ActivityNet Captions dataset
+```

@@ -102,13 +102,14 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                     val_performance, val_predictions = eval_epoch(model, val_data, context_data, logger, opt,  max_after_nms=40, iou_thds=thresholds, topks=topks)
                     test_performance, test_predictions = eval_epoch(model, test_data, context_data, logger, opt,  max_after_nms=40, iou_thds=thresholds, topks=topks)
                     logger.info(f"EPOCH: {epoch_i}")
-                    sum_ndcg = 0
+                    ndcg_anchor = 0
                     line1 = ""
                     line2 = "VAL: "
                     line3 = "TEST: "
                     for K, vs in val_performance.items():
                         for T, v in vs.items():
-                            sum_ndcg += v
+                            if T==20 and v == 0.5:
+                                ndcg_anchor = v
                             line1 += f"NDCG@{K}, IoU={T}\t"
                             line2 += f" {v:.6f}"
                             
@@ -120,60 +121,18 @@ def train(model, train_loader, val_data, test_data, context_data, opt, logger, w
                 logger.info(line3)
                 
                 
-                if sum_ndcg > best_val_ndcg:
+                if ndcg_anchor > best_val_ndcg:
                     print("~"*40)
                     save_json(val_predictions, os.path.join(opt.results_dir, "best_val_predictions.json"))
                     save_json(test_predictions, os.path.join(opt.results_dir, "best_test_predictions.json"))
-                    best_val_ndcg = sum_ndcg
+                    best_val_ndcg = ndcg_anchor
                     logger.info("BEST " + line2)
                     logger.info("BEST " + line3)
                     checkpoint = {"model": model.state_dict(), "model_cfg": model.config, "epoch": epoch_i}
                     torch.save(checkpoint, opt.ckpt_filepath)
                     logger.info("save checkpoint: {}".format(opt.ckpt_filepath))
                     print("~"*40)
-
                 logger.info("")
-                        
-                    # metrics = val_metrics_no_nms
-                    # # early stop/ log / save model
-                    # task_type = "VCMR"
-                    # if task_type in metrics:
-                    #     task_metrics = metrics[task_type]
-                    #     for iou_thd in [0.5, 0.7]:
-                    #         writer.add_scalars("Eval/{}-{}".format(task_type, iou_thd),
-                    #                             {k: v for k, v in task_metrics.items() if str(iou_thd) in k},
-                    #                             global_step)
-
-                    # # use the most strict metric available
-                    # stop_score = sum([metrics[opt.stop_task][e] for e in ["0.5-r1", "0.7-r1"]])
-                    # if stop_score > prev_best_score:
-                    #     prev_best_score = stop_score
-                    #     checkpoint = {"model": model.state_dict(), "model_cfg": model.config, "epoch": epoch_i}
-                    #     torch.save(checkpoint, opt.ckpt_filepath)
-                        
-                    #     # 
-                    #     best_file_paths = [e.replace("latest", "best") for e in val_latest_file_paths]
-                    #     for src, tgt in zip(val_latest_file_paths, best_file_paths):
-                    #         os.renames(src, tgt)
-                            
-                    #     best_file_paths = [e.replace("latest", "best") for e in test_latest_file_paths]
-                    #     for src, tgt in zip(test_latest_file_paths, best_file_paths):
-                    #         os.renames(src, tgt)
-                            
-                            
-                        # logger.info("The checkpoint file has been updated.")
-                        
-                        
-                    # else:
-                        # es_cnt += 1
-                        # if opt.max_es_cnt != -1 and es_cnt > opt.max_es_cnt:  # early stop
-                        #     with open(opt.train_log_filepath, "a") as f:
-                        #         f.write("Early Stop at epoch {}".format(epoch_i))
-                        #     logger.info("Early stop at {} with {} {}".format(
-                        #         epoch_i, " ".join([opt.stop_task] + stop_metric_names), prev_best_score))
-                        #     break
-
-
     writer.close()
 
 
@@ -197,7 +156,6 @@ def start_training():
     model = model_name(model_config)
     count_parameters(model)
     
-    
     # Prepare optimizer
     if opt.device.type == "cuda":
         if len(opt.device_ids) > 1:
@@ -208,7 +166,6 @@ def start_training():
 
     train(model, train_data_loader, val_data, test_data, context_data, opt, logger, writer)
     return opt.results_dir, opt.eval_split_name, opt.eval_path, opt.debug
-
 
 if __name__ == '__main__':
     model_dir, eval_split_name, eval_path, debug = start_training()

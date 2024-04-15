@@ -51,7 +51,7 @@ gdown 1j4mVkXjKCgafW3ReNjZ2Rk6CKx0Fk_n5
 tar -xf tvr_feature_release.tar.gz -C data
 ```
 
-### 4. Quick Training
+### 4. Training
 ```shell
 # modify the data path first 
 sh run_top01.sh

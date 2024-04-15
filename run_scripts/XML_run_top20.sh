@@ -15,7 +15,7 @@ python method_tvr/train.py \
     --no_norm_vfeat \
     --max_pred_l 16\
     --sub_feat_size 768\
-    --video_duration_idx_path ./data/TVR_Ranking/video_corpus.json \
+    --video_duration_idx_path ./data/TVR_Ranking/video_name_duration_id.json \
     --desc_bert_path ./data/common_data/query_bert.h5 \
     --vid_feat_path /home/share/czzhang/Dataset/TVR/TVR_feature/video_feature/tvr_i3d_rgb600_avg_cl-1.5.h5 \
     --sub_bert_path /home/share/czzhang/Dataset/TVR/TVR_feature/bert_feature/sub_query/tvr_sub_pretrained_w_sub_query_max_cl-1.5.h5\

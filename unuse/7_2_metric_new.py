@@ -106,7 +106,7 @@ def recall_iou_ndcg(gt_data, pred_data, video2idx, idx2video, video2duration, TS
 KS = [10]
 TS = [0.3]
 
-video2idx = load_json("./data/TVR_Ranking/video_corpus.json")
+video2idx = load_json("./data/TVR_Ranking/video_name_duration_id.json")
 video2duration = {k: v[0] for k, v in video2idx.items()}
 video2idx = {k: v[1] for k, v in video2idx.items()}
 idx2video = {v: k for k, v in video2idx.items()}

@@ -14,7 +14,7 @@ for i in raw_data:
 
 # video_list = [[v, k] for v, k in video_dict.items()]
 
-# save_jsonl(video_list, "./data/TVR_Ranking/video_corpus.jsonl")
+# save_jsonl(video_list, "./data/TVR_Ranking/video_name_duration_id.jsonl")
 # print(len(video_list))
 
 raw_data = load_jsonl("./data/tvr_video2dur_idx.json")[0]
@@ -26,4 +26,4 @@ for k, dt in raw_data.items():
         if k in video_set:
             video_dict[k] = v
 print(len(video_dict))
-save_json(video_dict, "./data/TVR_Ranking/video_corpus.json")
+save_json(video_dict, "./data/TVR_Ranking/video_name_duration_id.json")

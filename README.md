@@ -1,6 +1,6 @@
 # Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries
 
-The benchmark and dataset for the paper "Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries"
+The benchmark and dataset for the paper "Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries", comming soon...
 
 
 ![vmr_ranking_overview](./figures/task_introduction.png)

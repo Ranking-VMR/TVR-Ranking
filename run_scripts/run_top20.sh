@@ -16,9 +16,9 @@ python method_tvr/train.py \
     --max_pred_l 16\
     --sub_feat_size 768\
     --video_duration_idx_path ./data/TVR_Ranking/video_name_duration_id.json \
-    --desc_bert_path /home/renjie.liang/datasets/TVR_Ranking/features/query_bert.h5 \
-    --vid_feat_path /home/share/czzhang/Dataset/TVR/TVR_feature/video_feature/tvr_i3d_rgb600_avg_cl-1.5.h5 \
-    --sub_bert_path /home/share/czzhang/Dataset/TVR/TVR_feature/bert_feature/sub_query/tvr_sub_pretrained_w_sub_query_max_cl-1.5.h5\
+    --desc_bert_path /home//datasets/TVR_Ranking/features/query_bert.h5 \
+    --vid_feat_path PATH/TVR/TVR_feature/video_feature/tvr_i3d_rgb600_avg_cl-1.5.h5 \
+    --sub_bert_path PATH/TVR/TVR_feature/bert_feature/sub_query/tvr_sub_pretrained_w_sub_query_max_cl-1.5.h5\
     --eval_num_per_epoch 2 \
     --n_epoch 50 \
     --exp_id top_20

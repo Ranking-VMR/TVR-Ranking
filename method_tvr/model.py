@@ -138,7 +138,8 @@ class ReLoCLNet(nn.Module):
             loss_neg_q = self.config.lw_neg_q * loss_neg_q
         # sum loss
         # loss = loss_fcl + loss_vcl + loss_st_ed + loss_neg_ctx + loss_neg_q
-        simi = torch.exp(10*(simi-0.7)) 
+        # simi = torch.exp(10*(simi-0.7)) 
+        simi = simi
         loss = ((loss_fcl + loss_vcl + loss_st_ed) * simi).mean() +  loss_neg_ctx + loss_neg_q
         return loss, {"loss_st_ed": float(loss_st_ed.mean()), "loss_fcl": float(loss_fcl.mean()), "loss_vcl": loss_vcl.mean(),
                       "loss_neg_ctx": float(loss_neg_ctx), "loss_neg_q": float(loss_neg_q), "loss_overall": float(loss)}

@@ -3,7 +3,7 @@
 The benchmark and dataset for the paper "Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries", comming soon...
 
 
-![vmr_ranking_overview](./figures/task_introduction.png)
+![vmr_ranking_overview](./figures/taskComparisonV.jpg)
 
 > The codes are modified from [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet).
 
@@ -30,10 +30,10 @@ For the full dataset, please go down from [TVR-Ranking](
 https://drive.google.com/drive/folders/1QuE3Ah1VR_Sudjbl_5VFC1J-aT9Dh_WF?usp=drive_link) and organized as follows
 ```
 TVR_Ranking/
-  -val.jsonl                  
-  -test.jsonl                 
+  -val.json                  
+  -test.json                 
   -train_top01.jsonl
-  -train_top20.jsonl
+  -train_top20.json
   -train_top40.jsonl
   -video_name_duration_id.json
 ```

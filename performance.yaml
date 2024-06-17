@@ -1,0 +1,211 @@
+./results/author/XML_top01_20240328_132029/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.1039
+val NDCG@10, IoU=0.5: 0.0777
+val NDCG@10, IoU=0.7: 0.0281
+val NDCG@20, IoU=0.3: 0.1050
+val NDCG@20, IoU=0.5: 0.0767
+val NDCG@20, IoU=0.7: 0.0287
+val NDCG@40, IoU=0.3: 0.1128
+val NDCG@40, IoU=0.5: 0.0815
+val NDCG@40, IoU=0.7: 0.0312
+
+./results/author/XML_top20_20240327_152318/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.1849
+val NDCG@10, IoU=0.5: 0.1349
+val NDCG@10, IoU=0.7: 0.0482
+val NDCG@20, IoU=0.3: 0.1948
+val NDCG@20, IoU=0.5: 0.1417
+val NDCG@20, IoU=0.7: 0.0519
+val NDCG@40, IoU=0.3: 0.2222
+val NDCG@40, IoU=0.5: 0.1610
+val NDCG@40, IoU=0.7: 0.0610
+
+./results/author/XML_top40_20240327_152350/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.1989
+val NDCG@10, IoU=0.5: 0.1457
+val NDCG@10, IoU=0.7: 0.0577
+val NDCG@20, IoU=0.3: 0.2101
+val NDCG@20, IoU=0.5: 0.1525
+val NDCG@20, IoU=0.7: 0.0613
+val NDCG@40, IoU=0.3: 0.2393
+val NDCG@40, IoU=0.5: 0.1726
+val NDCG@40, IoU=0.7: 0.0708
+
+./results/author/XML_top01_20240328_132029/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.1030
+test NDCG@10, IoU=0.5: 0.0740
+test NDCG@10, IoU=0.7: 0.0312
+test NDCG@20, IoU=0.3: 0.1047
+test NDCG@20, IoU=0.5: 0.0751
+test NDCG@20, IoU=0.7: 0.0314
+test NDCG@40, IoU=0.3: 0.1142
+test NDCG@40, IoU=0.5: 0.0821
+test NDCG@40, IoU=0.7: 0.0336
+
+./results/author/XML_top20_20240327_152318/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.1864
+test NDCG@10, IoU=0.5: 0.1360
+test NDCG@10, IoU=0.7: 0.0556
+test NDCG@20, IoU=0.3: 0.1964
+test NDCG@20, IoU=0.5: 0.1434
+test NDCG@20, IoU=0.7: 0.0583
+test NDCG@40, IoU=0.3: 0.2227
+test NDCG@40, IoU=0.5: 0.1636
+test NDCG@40, IoU=0.7: 0.0671
+
+./results/author/XML_top40_20240327_152350/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.1998
+test NDCG@10, IoU=0.5: 0.1447
+test NDCG@10, IoU=0.7: 0.0580
+test NDCG@20, IoU=0.3: 0.2110
+test NDCG@20, IoU=0.5: 0.1533
+test NDCG@20, IoU=0.7: 0.0617
+test NDCG@40, IoU=0.3: 0.2378
+test NDCG@40, IoU=0.5: 0.1741
+test NDCG@40, IoU=0.7: 0.0704
+
+
+
+
+
+
+
+-------------------------------------------
+
+./results/author/CONQUER_top01_20240330_175853/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.103365
+val NDCG@10, IoU=0.5: 0.086462
+val NDCG@10, IoU=0.7: 0.056773
+val NDCG@20, IoU=0.3: 0.097937
+val NDCG@20, IoU=0.5: 0.081740
+val NDCG@20, IoU=0.7: 0.054680
+val NDCG@40, IoU=0.3: 0.099068
+val NDCG@40, IoU=0.5: 0.083460
+val NDCG@40, IoU=0.7: 0.057496
+
+./results/author/CONQUER_top20_20240330_175925/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.225898
+val NDCG@10, IoU=0.5: 0.205201
+val NDCG@10, IoU=0.7: 0.152701
+val NDCG@20, IoU=0.3: 0.200679
+val NDCG@20, IoU=0.5: 0.184394
+val NDCG@20, IoU=0.7: 0.139078
+val NDCG@40, IoU=0.3: 0.193324
+val NDCG@40, IoU=0.5: 0.178722
+val NDCG@40, IoU=0.7: 0.137410
+
+./results/author/CONQUER_top40_20240330_175929/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.236984
+val NDCG@10, IoU=0.5: 0.216381
+val NDCG@10, IoU=0.7: 0.163606
+val NDCG@20, IoU=0.3: 0.209417
+val NDCG@20, IoU=0.5: 0.193007
+val NDCG@20, IoU=0.7: 0.148126
+val NDCG@40, IoU=0.3: 0.199968
+val NDCG@40, IoU=0.5: 0.185392
+val NDCG@40, IoU=0.7: 0.143704
+
+./results/author/CONQUER_top01_20240330_175853/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.085975
+test NDCG@10, IoU=0.5: 0.071244
+test NDCG@10, IoU=0.7: 0.049209
+test NDCG@20, IoU=0.3: 0.083022
+test NDCG@20, IoU=0.5: 0.068588
+test NDCG@20, IoU=0.7: 0.047879
+test NDCG@40, IoU=0.3: 0.085626
+test NDCG@40, IoU=0.5: 0.071119
+test NDCG@40, IoU=0.7: 0.049987
+
+./results/author/CONQUER_top20_20240330_175925/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.216488
+test NDCG@10, IoU=0.5: 0.201492
+test NDCG@10, IoU=0.7: 0.147734
+test NDCG@20, IoU=0.3: 0.193457
+test NDCG@20, IoU=0.5: 0.180305
+test NDCG@20, IoU=0.7: 0.134136
+test NDCG@40, IoU=0.3: 0.185519
+test NDCG@40, IoU=0.5: 0.173393
+test NDCG@40, IoU=0.7: 0.130788
+
+./results/author/CONQUER_top40_20240330_175929/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.217347
+test NDCG@10, IoU=0.5: 0.203212
+test NDCG@10, IoU=0.7: 0.147092
+test NDCG@20, IoU=0.3: 0.194349
+test NDCG@20, IoU=0.5: 0.182529
+test NDCG@20, IoU=0.7: 0.133438
+test NDCG@40, IoU=0.3: 0.186623
+test NDCG@40, IoU=0.5: 0.175431
+test NDCG@40, IoU=0.7: 0.129969
+
+
+
+
+-------------------------------------------
+
+./results/author/ReLoCLNet_top_01_20240326_115033/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.1358
+val NDCG@10, IoU=0.5: 0.1221
+val NDCG@10, IoU=0.7: 0.0782
+val NDCG@20, IoU=0.3: 0.1306
+val NDCG@20, IoU=0.5: 0.1169
+val NDCG@20, IoU=0.7: 0.0738
+val NDCG@40, IoU=0.3: 0.1387
+val NDCG@40, IoU=0.5: 0.1226
+val NDCG@40, IoU=0.7: 0.0772
+
+./results/author/ReLoCLNet_top_20_20240326_162832/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.3193
+val NDCG@10, IoU=0.5: 0.2928
+val NDCG@10, IoU=0.7: 0.2022
+val NDCG@20, IoU=0.3: 0.3264
+val NDCG@20, IoU=0.5: 0.3007
+val NDCG@20, IoU=0.7: 0.2074
+val NDCG@40, IoU=0.3: 0.3595
+val NDCG@40, IoU=0.5: 0.3315
+val NDCG@40, IoU=0.7: 0.2292
+
+./results/author/ReLoCLNet_top_40_20240326_163257/best_val_predictions.json
+val NDCG@10, IoU=0.3: 0.3387
+val NDCG@10, IoU=0.5: 0.3143
+val NDCG@10, IoU=0.7: 0.2149
+val NDCG@20, IoU=0.3: 0.3479
+val NDCG@20, IoU=0.5: 0.3221
+val NDCG@20, IoU=0.7: 0.2218
+val NDCG@40, IoU=0.3: 0.3805
+val NDCG@40, IoU=0.5: 0.3527
+val NDCG@40, IoU=0.7: 0.2422
+
+./results/author/ReLoCLNet_top_01_20240326_115033/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.1349
+test NDCG@10, IoU=0.5: 0.1205
+test NDCG@10, IoU=0.7: 0.0826
+test NDCG@20, IoU=0.3: 0.1299
+test NDCG@20, IoU=0.5: 0.1154
+test NDCG@20, IoU=0.7: 0.0789
+test NDCG@40, IoU=0.3: 0.1369
+test NDCG@40, IoU=0.5: 0.1209
+test NDCG@40, IoU=0.7: 0.0821
+
+./results/author/ReLoCLNet_top_20_20240326_162832/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.3115
+test NDCG@10, IoU=0.5: 0.2872
+test NDCG@10, IoU=0.7: 0.2018
+test NDCG@20, IoU=0.3: 0.3214
+test NDCG@20, IoU=0.5: 0.2956
+test NDCG@20, IoU=0.7: 0.2084
+test NDCG@40, IoU=0.3: 0.3525
+test NDCG@40, IoU=0.5: 0.3242
+test NDCG@40, IoU=0.7: 0.2287
+
+./results/author/ReLoCLNet_top_40_20240326_163257/best_test_predictions.json
+test NDCG@10, IoU=0.3: 0.3363
+test NDCG@10, IoU=0.5: 0.3121
+test NDCG@10, IoU=0.7: 0.2210
+test NDCG@20, IoU=0.3: 0.3473
+test NDCG@20, IoU=0.5: 0.3217
+test NDCG@20, IoU=0.7: 0.2275
+test NDCG@40, IoU=0.3: 0.3785
+test NDCG@40, IoU=0.5: 0.3498
+test NDCG@40, IoU=0.7: 0.2470
+

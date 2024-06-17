@@ -147,15 +147,6 @@ class QueryEvalDataset(Dataset):
     def get_relevant_moment_gt(self):
         gt_all = []
         for data in self.annotations:
-            # new_relevance = {
-            # 'pair_id': [entry['pair_id'] for entry in data],
-            # 'video_name': [entry['video_name'] for entry in data],
-            # 'timestamp': [entry['timestamp'] for entry in data],
-            # 'duration': [entry['duration'] for entry in data],
-            # 'caption': [entry['caption'] for entry in data],
-            # 'similarity': [entry['similarity'] for entry in data],
-            # 'relevance': [entry['relevance'] for entry in data]
-            # }
             gt_all.append({
                 "query_id": data["query_id"],
                 "relevant_moment": data["relevant_moment"]})

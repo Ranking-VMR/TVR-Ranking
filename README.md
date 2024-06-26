@@ -5,7 +5,7 @@ The benchmark and dataset for the paper "Video Moment Retrieval in Practical Set
 We recommend cloning the code, data, and feature files from the Hugging Face repository for [TVR_Ranking](https://huggingface.co/axgroup/TVR-Ranking).
 
 
-![vmr_ranking_overview](./figures/taskComparisonV.jpg)
+![vmr_ranking_overview](./figures/taskComparisonV.png)
 
 > The codes are modified from [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet).
 
@@ -27,8 +27,8 @@ pip install h5py pandas tqdm easydict pyyaml
 The conda environment of [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet) also works.
 
 ### 2. Download full dataset
-For the full dataset, please go down from [TVR-Ranking](
-https://drive.google.com/drive/folders/1QuE3Ah1VR_Sudjbl_5VFC1J-aT9Dh_WF?usp=drive_link) and organized as follows
+For the full dataset, please go down from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+
 ```
 TVR_Ranking/
   -val.json                  
@@ -37,16 +37,17 @@ TVR_Ranking/
   -train_top20.json
   -train_top40.json
   -video_corpus.json
-  -
 ```
 The detailed introduction and raw annotations is available at [TVR_Ranking Introduction](data/TVR_Ranking/readme.md).
 
 ### 3. Download features
 
-For the features of the TVR dataset, you can request them from [TVR](https://tvr.cs.unc.edu/) or download them from [TVR features on Hugging Face](https://huggingface.co/datasets/k-nick/NLVL).
+For the query features, you could download from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+
+For the video and subtitle features, you can request them from [TVR](https://tvr.cs.unc.edu/).
 
 ```shell
-tar -xf tvr_feature_release.tar.gz -C data
+tar -xf tvr_feature_release.tar.gz -C data/TVR_Ranking/feature
 ```
 
 ### 4. Training
@@ -71,9 +72,9 @@ Top $N$ moments were comprised of a pseudo training set by the query-caption sim
 |                | 40  | 0.3479         | 0.3473          | 0.3221         | 0.3217          | 0.2218         | 0.2275          |
 
 
-
-The checkpoint can all be accessed from [CheckPoints](https://drive.google.com/drive/folders/1hXJn-5ORA8T1Iyx6K2BK7KnUOpCQD9Na?usp=drive_link).
-
+### 4. Inferring
+The checkpoint can all be accessed from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+(todo)
 
 ## Citation
 If you feel this project helpful to your research, please cite our work.

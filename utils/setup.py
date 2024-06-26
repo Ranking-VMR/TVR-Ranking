@@ -16,6 +16,7 @@ def get_args():
     parser.add_argument("--results_path", type=str, default="results")
         
     # setup 
+    parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--exp_id", type=str, default=None, help="id of this run, required at training")
     parser.add_argument("--seed", type=int, default=2024, help="random seed")
     parser.add_argument("--device", type=int, default=0, help="0 cuda, -1 cpu")

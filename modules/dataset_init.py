@@ -12,6 +12,8 @@ def collate_fn(batch, task):
         simis = [e["simi"] for e in batch]
         batch_data["simi"] =  torch.tensor(simis)
         
+
+        
         query_feat_mask = pad_sequences_1d([e["query_feat"] for e in batch], dtype=torch.float32, fixed_length=None)
         batch_data["query_feat"] = query_feat_mask[0]
         batch_data["query_mask"] = query_feat_mask[1]    
@@ -43,6 +45,9 @@ def collate_fn(batch, task):
         query_feat_mask = pad_sequences_1d([e["query_feat"] for e in batch], dtype=torch.float32, fixed_length=None)
         batch_data["query_feat"] = query_feat_mask[0]
         batch_data["query_mask"] = query_feat_mask[1]    
+
+        query_id = [e["query_id"] for e in batch]
+        batch_data["query_id"] =  torch.tensor(query_id)
 
     return  batch_data
 

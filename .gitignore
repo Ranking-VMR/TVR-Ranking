@@ -7,6 +7,8 @@ __pycache__/
 *.so
 
 data
+unused
+
 results
 # Distribution / packaging
 .Python

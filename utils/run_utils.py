@@ -18,12 +18,16 @@ def count_parameters(model, verbose=True):
         print("Parameter Count: all {:,d}; trainable {:,d}".format(n_all, n_trainable))
     return n_all, n_trainable
 
-
 def prepare_model(opt, logger):
     model = ReLoCLNet(opt)
     count_parameters(model)
-    
-    # Prepare optimizer
+
+    if opt.checkpoint is not None:
+        checkpoint = torch.load(opt.checkpoint, map_location=opt.device)  
+        model.load_state_dict(checkpoint['model'])
+        logger.info(f"Loading checkpoint from {opt.checkpoint}")
+
+    # Prepare optimizer (unchanged)
     if opt.device.type == "cuda":
         logger.info("CUDA enabled.")
         model.to(opt.device)

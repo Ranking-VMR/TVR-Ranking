@@ -135,7 +135,8 @@ class QueryEvalDataset(Dataset):
         raw_data = self.annotations[index]
         query_id = raw_data["query_id"]
         query = raw_data["query"]
-        model_inputs =  { "query_feat": self.get_query_feat_by_query_id(query_id)}
+        model_inputs =  {"query_id": query_id,  
+                         "query_feat": self.get_query_feat_by_query_id(query_id)}
         return model_inputs
 
     def get_query_feat_by_query_id(self, query_id):
@@ -145,11 +146,12 @@ class QueryEvalDataset(Dataset):
         return torch.from_numpy(query_feat)
 
     def get_relevant_moment_gt(self):
-        gt_all = []
+        gt_all = {}
         for data in self.annotations:
-            gt_all.append({
-                "query_id": data["query_id"],
-                "relevant_moment": data["relevant_moment"]})
+            gt_all[data["query_id"]] = data["relevant_moment"]
+            # gt_all.append({
+            #     "query_id": data["query_id"],
+            #     "relevant_moment": data["relevant_moment"]})
         return gt_all
 
     def get_st_ed_label(self, ts, max_idx):

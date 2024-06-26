@@ -2,6 +2,7 @@
 
 The benchmark and dataset for the paper "Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries", comming soon...
 
+We recommend clone the code and full data from  (TVR_Ranking) in huggingface.
 
 ![vmr_ranking_overview](./figures/taskComparisonV.jpg)
 
@@ -32,10 +33,11 @@ https://drive.google.com/drive/folders/1QuE3Ah1VR_Sudjbl_5VFC1J-aT9Dh_WF?usp=dri
 TVR_Ranking/
   -val.json                  
   -test.json                 
-  -train_top01.jsonl
+  -train_top01.json
   -train_top20.json
-  -train_top40.jsonl
-  -video_name_duration_id.json
+  -train_top40.json
+  -video_corpus.json
+  -
 ```
 The detailed introduction and raw annotations is available at [TVR_Ranking Introduction](data/TVR_Ranking/readme.md).
 
@@ -50,7 +52,7 @@ tar -xf tvr_feature_release.tar.gz -C data
 ### 4. Training
 ```shell
 # modify the data path first 
-sh run_top01.sh
+sh run_top20.sh
 ```
 
 ## Baseline

@@ -2,6 +2,7 @@ import pandas as pd
 from tqdm import tqdm, trange
 import numpy as np
 from collections import defaultdict
+import copy  
 
 def calculate_iou(pred_start: float, pred_end: float, gt_start: float, gt_end: float) -> float:
     intersection_start = max(pred_start, gt_start)
@@ -24,14 +25,13 @@ def calculate_ndcg(pred_scores, true_scores):
 def calculate_ndcg_iou(all_gt, all_pred, TS, KS):
     performance = defaultdict(lambda: defaultdict(list))
     performance_avg = defaultdict(lambda: defaultdict(float))
-    for i in range(len(all_pred)):
-    # for i in trange(len(all_pred), desc="Calculate NDCG,IoU: "):
-        one_pred = all_pred[i]
-        one_gt = all_gt[i]
-        one_gt.sort(key=lambda x: x["relevance"], reverse=True)
+    for k in all_pred.keys():
+        one_pred = all_pred[k]
+        one_gt = all_gt[k]  
 
+        one_gt.sort(key=lambda x: x["relevance"], reverse=True)
         for T in TS:
-            one_gt_drop = one_gt.copy()
+            one_gt_drop = copy.deepcopy(one_gt)  
             predictions_with_scores = []
             
             for pred in one_pred:
@@ -62,54 +62,3 @@ def calculate_ndcg_iou(all_gt, all_pred, TS, KS):
             performance_avg[K][T] = np.mean(v)
     return performance_avg
 
-
-
-# def calculate_ndcg_iou(gt_data, pred_data, TS, KS):
-#     performance = defaultdict(lambda: defaultdict(list))
-#     performance_avg = defaultdict(lambda: defaultdict(float))
-    
-#     for i in trange(len(pred_data)):
-#     # for i in trange(len(pred_data), desc="Calculate NDCG,IoU: "):
-#         one_pred = pred_data[i]
-#         one_gt = gt_data[i]
-        
-#         one_pred_df = pd.DataFrame(one_pred, columns=["video_name", "timestamp", "model_scores"])
-#         one_gt_df =  pd.DataFrame(one_gt, columns=["video_name", "timestamp", "relevance", "duration"])
-#         one_gt_df = one_gt_df.sort_values(by="relevance", ascending=False).reset_index(drop=True)
-
-#         for T in TS:
-#             one_gt_drop = one_gt_df.copy()
-#             predictions_with_scores = []
-#             for index, pred in one_pred_df.iterrows():
-#                 pred_video_name, pred_st, pred_ed = pred["video_name"], pred["timestamp"][0], pred["timestamp"][1]
-#                 matched_rows = one_gt_drop[one_gt_drop["video_name"] == pred_video_name].reset_index(drop=True)
-#                 if matched_rows.empty:
-#                     pred["pred_relevance"] = 0
-#                 else:
-#                     matched_rows["iou"] = matched_rows.apply(lambda row: calculate_iou(pred_st, pred_ed, row["timestamp"][0], row["timestamp"][1]), axis=1)
-#                     max_iou_idx = matched_rows["iou"].idxmax()
-#                     max_iou_row = matched_rows.iloc[max_iou_idx]
-                    
-#                     if max_iou_row["iou"] > T:
-#                         pred["pred_relevance"] = max_iou_row["relevance"]
-                        
-#                         original_index = matched_rows.index[max_iou_idx]
-#                         one_gt_drop = one_gt_drop.drop(index=original_index).reset_index(drop=True)
-                        
-#                         # original_index = one_gt_drop[one_gt_drop["video_name"] == pred_video_name].index[max_iou_idx]
-#                         # one_gt_drop = one_gt_drop.drop(index=original_index).reset_index(drop=True)
-#                     else:
-#                         pred["pred_relevance"] = 0
-                
-#                 predictions_with_scores.append(pred)
-#             predictions_with_scores = pd.DataFrame(predictions_with_scores)
-#             for K in KS:
-#                 true_scores = one_gt_df["relevance"].tolist()[:K]
-#                 pred_scores = predictions_with_scores["pred_relevance"].tolist()[:K]
-#                 ndcg_score = calculate_ndcg(pred_scores, true_scores)
-#                 performance[K][T].append(ndcg_score)
-
-#     for K, vs in performance.items():
-#         for T, v in vs.items():
-#             performance_avg[K][T] = np.mean(v)
-#     return performance_avg

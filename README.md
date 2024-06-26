@@ -1,20 +1,18 @@
-# Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries
+# Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for Imprecise  Queries
 
-The benchmark and dataset for the paper "Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries", comming soon...
+The benchmark and dataset for the paper "Video Moment Retrieval in Practical Settings: A Dataset of Ranked Moments for Imprecise Queries" is coming soon.
 
-We recommend cloning the code, data, and feature files from the Hugging Face repository for [TVR_Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+We recommend cloning the code, data, and feature files from the Hugging Face repository at [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).  
+  
+![TVR_Ranking_overview](./figures/taskComparisonV.png)  
 
 
-![vmr_ranking_overview](./figures/taskComparisonV.png)
-
-> The codes are modified from [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet).
 
 
 ## Getting started
 ### 1. Install the requisites
 
-The Python packages we used were listed as follows.
-Commonly, the most recent versions work well.
+The Python packages we used are listed as follows. Commonly, the most recent versions work well.  
 
 
 ```shell
@@ -24,10 +22,11 @@ pip install pytorch # 2.2.1+cu121
 pip install tensorboard 
 pip install h5py pandas tqdm easydict pyyaml
 ```
-The conda environment of [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet) also works.
 
 ### 2. Download full dataset
-For the full dataset, please go down from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+For the full dataset, please go down from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking). \
+The detailed introduction and raw annotations is available at [Dataset Introduction](data/TVR_Ranking/readme.md).
+
 
 ```
 TVR_Ranking/
@@ -38,13 +37,11 @@ TVR_Ranking/
   -train_top40.json
   -video_corpus.json
 ```
-The detailed introduction and raw annotations is available at [TVR_Ranking Introduction](data/TVR_Ranking/readme.md).
 
 ### 3. Download features
 
-For the query features, you could download from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
-
-For the video and subtitle features, you can request them from [TVR](https://tvr.cs.unc.edu/).
+For the query BERT features, you can download them from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking). \
+For the video and subtitle features, please request them at [TVR](https://tvr.cs.unc.edu/).
 
 ```shell
 tar -xf tvr_feature_release.tar.gz -C data/TVR_Ranking/feature
@@ -57,6 +54,7 @@ sh run_top20.sh
 ```
 
 ## Baseline
+(ToDo: running the new version...) \
 The baseline performance of  $NDGC@20$ was shown as follows.
 Top $N$ moments were comprised of a pseudo training set by the query-caption similarity.
 | Model          | $N$ | IoU = 0.3, val | IoU = 0.3, test | IoU = 0.5, val | IoU = 0.5, test | IoU = 0.7, val | IoU = 0.7, test |
@@ -73,8 +71,8 @@ Top $N$ moments were comprised of a pseudo training set by the query-caption sim
 
 
 ### 4. Inferring
-The checkpoint can all be accessed from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
-(todo)
+[ToDo] The checkpoint can all be accessed from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+
 
 ## Citation
 If you feel this project helpful to your research, please cite our work.

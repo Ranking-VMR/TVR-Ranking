@@ -2,12 +2,12 @@
 
 The benchmark and dataset for the paper "Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for  Imprecise  Queries", comming soon...
 
-We recommend clone the code and full data from  (TVR_Ranking) in huggingface.
+We recommend cloning the code, data, and feature files from the Hugging Face repository for [TVR_Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+
 
 ![vmr_ranking_overview](./figures/taskComparisonV.jpg)
 
 > The codes are modified from [ReLoCLNet](https://github.com/26hzhang/ReLoCLNet).
-
 
 
 ## Getting started

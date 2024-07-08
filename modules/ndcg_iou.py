@@ -25,7 +25,7 @@ def calculate_ndcg(pred_scores, true_scores):
 def calculate_ndcg_iou(all_gt, all_pred, TS, KS):
     performance = defaultdict(lambda: defaultdict(list))
     performance_avg = defaultdict(lambda: defaultdict(float))
-    for k in all_pred.keys():
+    for k in tqdm(all_pred.keys(), desc="Calculate NDCG"):
         one_pred = all_pred[k]
         one_gt = all_gt[k]  
 

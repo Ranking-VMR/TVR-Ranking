@@ -23,7 +23,7 @@ class TrainDataset(Dataset):
         # prepare desc data
         self.use_video = "video" in ctx_mode
         self.use_sub = "sub" in ctx_mode
-
+        
         self.desc_bert_h5 = h5py.File(desc_bert_path, "r")
         if self.use_video:
             self.vid_feat_h5 = h5py.File(video_feat_path, "r")
@@ -56,6 +56,7 @@ class TrainDataset(Dataset):
         query_id=raw_data["query_id"]
         video_name=raw_data["video_name"]
         timestamp = raw_data["timestamp"]
+        duration = raw_data["duration"]
         
         model_inputs = dict()
         model_inputs["simi"] = raw_data["similarity"]
@@ -80,12 +81,8 @@ class TrainDataset(Dataset):
         else:
             model_inputs["sub_feat"] = torch.zeros((2, 2))
 
-        # print(ctx_l)
-        # print(timestamp)
         model_inputs["st_ed_indices"] = self.get_st_ed_label(timestamp, max_idx=ctx_l - 1)
-        # print(model_inputs["st_ed_indices"])
         return model_inputs
-        # return dict(meta=meta, model_inputs=model_inputs)
 
     def get_st_ed_label(self, ts, max_idx):
         """
@@ -175,6 +172,7 @@ class CorpusEvalDataset(Dataset):
 
         self.use_video = "video" in ctx_mode
         self.use_sub = "sub" in ctx_mode
+
         if self.use_video:
             self.vid_feat_h5 = h5py.File(video_feat_path, "r")
         if self.use_sub:
@@ -187,6 +185,8 @@ class CorpusEvalDataset(Dataset):
         """No need to batch, since it has already been batched here"""
         raw_data = self.video_data[index]
         # initialize with basic data
+        duration = raw_data["duration"]
+        video_name = raw_data["vid_name"]
         meta = dict(vid_name=raw_data["vid_name"], duration=raw_data["duration"])
         model_inputs = dict()
 

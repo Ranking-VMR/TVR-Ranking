@@ -2,8 +2,8 @@
 
 The benchmark and dataset for the paper "Video Moment Retrieval in Practical Settings: A Dataset of Ranked Moments for Imprecise Queries" is coming soon.
 
-We recommend cloning the code, data, and feature files from the Hugging Face repository at [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).  
-  
+We recommend cloning the code, data, and feature files from the Hugging Face repository at [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).  This repository only includes the code for ReLoCLNet. You can download the other baseline models from [XML](https://huggingface.co/LiangRenjie/XML_RVMR) and [CONQUER](https://huggingface.co/LiangRenjie/CONQUER_RVMR).
+
 ![TVR_Ranking_overview](./figures/taskComparisonV.png)  
 
 
@@ -52,26 +52,51 @@ tar -xf tvr_feature_release.tar.gz -C data/TVR_Ranking/feature
 # modify the data path first 
 sh run_top20.sh
 ```
+### 5. Inferring
+The checkpoint can all be accessed from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+```shell
+sh infer_top20.sh
+```
 
-## Baseline
-(ToDo: running the new version...) \
-The baseline performance of  $NDGC@20$ was shown as follows.
+## Experiment Results
+### Baseline
+The baseline performance of  $NDGC@40$ was shown as follows.
 Top $N$ moments were comprised of a pseudo training set by the query-caption similarity.
-| Model          | $N$ | IoU = 0.3, val | IoU = 0.3, test | IoU = 0.5, val | IoU = 0.5, test | IoU = 0.7, val | IoU = 0.7, test |
-|----------------|-----|----------------|-----------------|----------------|-----------------|----------------|-----------------|
-| **XML**        | 1   | 0.1050         | 0.1047          | 0.0767         | 0.0751          | 0.0287         | 0.0314          |
-|                | 20  | 0.1948         | 0.1964          | 0.1417         | 0.1434          | 0.0519         | 0.0583          |
-|                | 40  | 0.2101         | 0.2110          | 0.1525         | 0.1533          | 0.0613         | 0.0617          |
-| **CONQUER**    | 1   | 0.0979         | 0.0830          | 0.0817         | 0.0686          | 0.0547         | 0.0479          |
-|                | 20  | 0.2007         | 0.1935          | 0.1844         | 0.1803          | 0.1391         | 0.1341          |
-|                | 40  | 0.2094         | 0.1943          | 0.1930         | 0.1825          | 0.1481         | 0.1334          |
-| **ReLoCLNet**  | 1   | 0.1306         | 0.1299          | 0.1169         | 0.1154          | 0.0738         | 0.0789          |
-|                | 20  | 0.3264         | 0.3214          | 0.3007         | 0.2956          | 0.2074         | 0.2084          |
-|                | 40  | 0.3479         | 0.3473          | 0.3221         | 0.3217          | 0.2218         | 0.2275          |
+
+| **Model**      | **Train Set Top N** | **IoU=0.3**  | |**IoU=0.5**  | |**IoU=0.7**  | |
+|----------------|---------------------|--------------|--------------|--------------|--------------|--------------|--------------|
+|                |                     | **Val** | **Test** | **Val** | **Test** | **Val** | **Test** |
+| **XML**        | 1                   | 0.1077 | 0.1016 | 0.0775 | 0.0727 | 0.0273 | 0.0294 |
+|                | 20                  | 0.2580 | 0.2512 | 0.1874 | 0.1853 | 0.0705 | 0.0753 |
+|                | 40                  | 0.2408 | 0.2432 | 0.1740 | 0.1791 | 0.0666 | 0.0720 |
+| **ReLoCLNet**  | 1                   | 0.1533 | 0.1489 | 0.1321 | 0.1304 | 0.0878 | 0.0869 |
+|                | 20                  | 0.4039 | 0.4031 | 0.3656 | 0.3648 | 0.2542 | 0.2567 |
+|                | 40                  | 0.4725 | 0.4735 | 0.4337 | 0.4337 | 0.3015 | 0.3079 |
 
 
-### 4. Inferring
-[ToDo] The checkpoint can all be accessed from Hugging Face [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).
+###  ReLoCLNet Performance
+
+| **Model**  | **Train Set Top N** | **IoU=0.3**  | |**IoU=0.5**  | |**IoU=0.7**  | |
+|------------|---------------------|--------------|--------------|--------------|--------------|--------------|--------------|
+|            |                     | **Val** | **Test** | **Val** | **Test** | **Val** | **Test** |
+| **NDCG@10** |                     |              |              |              |              |              |              |
+| ReLoCLNet  | 1                   | 0.1575 | 0.1525 | 0.1358 | 0.1349 | 0.0908 | 0.0916 |
+| ReLoCLNet  | 20                  | 0.3751 | 0.3751 | 0.3407 | 0.3397 | 0.2316 | 0.2338 |
+| ReLoCLNet  | 40                  | 0.4339 | 0.4353 | 0.3984 | 0.3986 | 0.2693 | 0.2807 |
+| **NDCG@20** |                     |              |              |              |              |              |              |
+| ReLoCLNet  | 1                   | 0.1504 | 0.1439 | 0.1303 | 0.1269 | 0.0866 | 0.0849 |
+| ReLoCLNet  | 20                  | 0.3815 | 0.3792 | 0.3462 | 0.3427 | 0.2381 | 0.2386 |
+| ReLoCLNet  | 40                  | 0.4418 | 0.4439 | 0.4060 | 0.4059 | 0.2787 | 0.2877 |
+| **NDCG@40** |                     |              |              |              |              |              |              |
+| ReLoCLNet  | 1                   | 0.1533 | 0.1489 | 0.1321 | 0.1304 | 0.0878 | 0.0869 |
+| ReLoCLNet  | 20                  | 0.4039 | 0.4031 | 0.3656 | 0.3648 | 0.2542 | 0.2567 |
+| ReLoCLNet  | 40                  | 0.4725 | 0.4735 | 0.4337 | 0.4337 | 0.3015 | 0.3079 |
+
+
+
+
+
+
 
 
 ## Citation

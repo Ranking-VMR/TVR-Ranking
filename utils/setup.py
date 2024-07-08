@@ -84,12 +84,13 @@ def get_args():
     parser.add_argument("--ndcg_topk", type=int, nargs='+', default=[10, 20, 40], help="List of NDCG top k values")
     args = parser.parse_args()
     
-    
+    args.results_path = os.path.join(args.results_path, args.exp_id)
     os.makedirs(args.results_path, exist_ok=True)
+    
     if args.hard_negative_start_epoch != -1:
         if args.hard_pool_size > args.bsz:
             print("[WARNING] hard_pool_size is larger than bsz")
-    
+
     return args
 
 

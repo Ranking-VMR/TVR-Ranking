@@ -201,7 +201,8 @@ class ReLoCLNet(nn.Module):
         feat = input_proj_layer(feat)
         feat = pos_embed_layer(feat)
         mask = mask.unsqueeze(1)  # (N, 1, L), torch.FloatTensor
-        return encoder_layer(feat, mask)  # (N, L, D_hidden)
+        feat = encoder_layer(feat, mask)  # (N, L, D_hidden)
+        return feat
 
     def get_modularized_queries(self, encoded_query, query_mask, return_modular_att=False):
         """

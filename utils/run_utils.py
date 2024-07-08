@@ -2,6 +2,7 @@ import torch
 from modules.ReLoCLNet import ReLoCLNet
 from modules.optimization import BertAdam
 import numpy as np
+import copy
 
 def count_parameters(model, verbose=True):
     """Count number of parameters in PyTorch model,
@@ -21,17 +22,26 @@ def count_parameters(model, verbose=True):
 def prepare_model(opt, logger):
     model = ReLoCLNet(opt)
     count_parameters(model)
-
-    if opt.checkpoint is not None:
-        checkpoint = torch.load(opt.checkpoint, map_location=opt.device)  
-        model.load_state_dict(checkpoint['model'])
-        logger.info(f"Loading checkpoint from {opt.checkpoint}")
-
-    # Prepare optimizer (unchanged)
     if opt.device.type == "cuda":
         logger.info("CUDA enabled.")
         model.to(opt.device)
     return model
+
+def resume_model(logger, opt, model=None, optimizer=None, start_epoch=None):
+    checkpoint = torch.load(opt.checkpoint, map_location=opt.device)
+    if model is not None:
+        model.load_state_dict(checkpoint['model_state_dict'])
+        logger.info(f"Loading model from {opt.checkpoint} at epoch {checkpoint['epoch']}")
+
+    if optimizer is not None:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        logger.info(f"Loading optimizer from {opt.checkpoint} at epoch {checkpoint['epoch']}")
+            
+    if start_epoch is not None:
+        start_epoch = checkpoint['epoch']
+        logger.info(f"Loading start_epoch from {opt.checkpoint} at epoch {checkpoint['epoch']}")
+        
+    return model, optimizer, start_epoch,
 
 def prepare_optimizer(model, opt, total_train_steps):
     
@@ -43,10 +53,20 @@ def prepare_optimizer(model, opt, total_train_steps):
 
     optimizer = BertAdam(optimizer_grouped_parameters, lr=opt.lr, weight_decay=opt.wd, warmup=opt.lr_warmup_proportion,
                          t_total=total_train_steps, schedule="warmup_linear")
-    
     return optimizer
 
-
+def save_model(model, optimizer, epoch, path, logger):
+    data = {
+            'epoch': epoch,
+            'model_cfg': model.config,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+        }
+    torch.save(data, path)
+    logger.info(f"Save checkpoint at {path}")
+    logger.info("")
+    
+    
 def topk_3d(tensor, k):
     """
     Find the top k values and their corresponding indices in a 3D tensor.
@@ -94,7 +114,7 @@ def generate_min_max_length_mask(array_shape, min_l, max_l):
     return final_prob_mask  # with valid bit to be 1
 
 
-def extract_topk_elements(query_scores, start_probs, end_probs, k):
+def extract_topk_elements(query_scores, start_probs, end_probs, video_names, k):
 
     # Step 1: Find the top k values and their indices in query_scores
     topk_values, topk_indices = torch.topk(query_scores, k)
@@ -102,8 +122,14 @@ def extract_topk_elements(query_scores, start_probs, end_probs, k):
     # Step 2: Use these indices to select the corresponding elements from start_probs and end_probs
     selected_start_probs = torch.stack([start_probs[i, indices] for i, indices in enumerate(topk_indices)], dim=0)
     selected_end_probs = torch.stack([end_probs[i, indices] for i, indices in enumerate(topk_indices)], dim=0)
+    
+    selected_video_name = []
+    for i in range(topk_indices.shape[0]):
+        vn = copy.deepcopy(video_names)
+        tmp = [vn[idx] for idx in topk_indices[i]]
+        selected_video_name.append(tmp)
 
-    return topk_values, selected_start_probs, selected_end_probs
+    return topk_values, selected_start_probs, selected_end_probs, selected_video_name
 
 def logger_ndcg_iou(val_ndcg_iou, logger, suffix):
     for K, vs in val_ndcg_iou.items():

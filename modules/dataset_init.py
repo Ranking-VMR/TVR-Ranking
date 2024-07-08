@@ -41,6 +41,9 @@ def collate_fn(batch, task):
         batch_data["sub_feat"] = sub_feat_mask[0]
         batch_data["sub_mask"] = sub_feat_mask[1]
         
+        # batch_data["video_name"] = [e["video_name"] for e in batch]
+        
+        
     if task == "eval":
         query_feat_mask = pad_sequences_1d([e["query_feat"] for e in batch], dtype=torch.float32, fixed_length=None)
         batch_data["query_feat"] = query_feat_mask[0]

@@ -1,6 +1,6 @@
 # Video Moment Retrieval in Practical Setting: A Dataset of Ranked Moments for Imprecise  Queries
 
-The benchmark and dataset for the paper (Video Moment Retrieval in Practical Settings: A Dataset of Ranked Moments for Imprecise Queries)[https://arxiv.org/abs/2407.06597].
+The benchmark and dataset for the paper [Video Moment Retrieval in Practical Settings: A Dataset of Ranked Moments for Imprecise Queries](https://arxiv.org/abs/2407.06597).
 
 We recommend cloning the code, data, and feature files from the Hugging Face repository at [TVR-Ranking](https://huggingface.co/axgroup/TVR-Ranking).  This repository only includes the code for ReLoCLNet. You can download the other baseline models from [XML](https://huggingface.co/LiangRenjie/XML_RVMR) and [CONQUER](https://huggingface.co/LiangRenjie/CONQUER_RVMR).
 

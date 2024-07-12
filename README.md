@@ -100,7 +100,15 @@ Top $N$ moments were comprised of a pseudo training set by the query-caption sim
 
 
 ## Citation
-If you feel this project helpful to your research, please cite our work.
+If you feel this project is helpful to your research, please cite our work.
 ```
-
+@misc{liang2024tvrrankingdatasetrankedvideo,
+      title={TVR-Ranking: A Dataset for Ranked Video Moment Retrieval with Imprecise Queries}, 
+      author={Renjie Liang and Li Li and Chongzhi Zhang and Jing Wang and Xizhou Zhu and Aixin Sun},
+      year={2024},
+      eprint={2407.06597},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2407.06597}, 
+}
 ```

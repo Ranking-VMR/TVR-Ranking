@@ -10,5 +10,3 @@ python infer.py \
     --checkpoint        results/tvr_ranking/top20/best_model.pt \
     --exp_id            top20_infer
 
-# qsub -I -l select=1:ngpus=1 -P gs_slab -q slab_gpu8
-# cd /home/renjie.liang/11_TVR-Ranking/ReLoCLNet; conda activate py11; sh infer_top20.sh

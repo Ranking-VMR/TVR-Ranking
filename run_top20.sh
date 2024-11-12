@@ -13,5 +13,3 @@ python train.py \
     --bsz                   512 \
     --exp_id                top20
 
-# qsub -I -l select=1:ngpus=1 -P gs_slab -q gpu8
-# cd /home/renjie.liang/11_TVR-Ranking/ReLoCLNet; conda activate py11; sh run_top20.sh 

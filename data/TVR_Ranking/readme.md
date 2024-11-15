@@ -57,12 +57,4 @@ An example from validation was shown as follows.
 ## License
 This project and dataset are licensed under a Creative Commons license.
 
-## Citing the Dataset
-If you use the TVR-Ranking dataset in your research, please cite it as follows:
 
-```
-citation
-```
-
-## Contact Information
-For any questions or further information regarding the TVR-Ranking dataset, please contact Renjie Liang at liangrj5@gmail.com.
